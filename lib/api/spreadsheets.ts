@@ -6,6 +6,7 @@ import type {
   UpdateColumnRequest,
   CreateRowRequest,
   UpdateCellRequest,
+  UpdateRelationRequest,
 } from '@/lib/database/types';
 
 export const spreadsheetApi = {
@@ -75,5 +76,18 @@ export const spreadsheetApi = {
 
   async deleteCell(rowId: string, columnId: string) {
     return await db.deleteCell(rowId, columnId);
+  },
+
+  // Relation operations
+  async upsertRelations(rowId: string, columnId: string, request: UpdateRelationRequest) {
+    return await db.upsertRelations(rowId, columnId, request);
+  },
+
+  async getRelatedRows(rowId: string, columnId: string) {
+    return await db.getRelatedRows(rowId, columnId);
+  },
+
+  async getAvailableRowsForRelation(targetSpreadsheetId: string, excludeRowId?: string) {
+    return await db.getAvailableRowsForRelation(targetSpreadsheetId, excludeRowId);
   },
 };

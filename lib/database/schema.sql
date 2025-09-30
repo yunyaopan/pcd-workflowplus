@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS spreadsheet_columns (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   spreadsheet_id UUID REFERENCES spreadsheets(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  data_type TEXT NOT NULL CHECK (data_type IN ('text', 'number', 'date', 'select', 'checkbox')),
-  options JSONB, -- For select type columns
+  data_type TEXT NOT NULL CHECK (data_type IN ('text', 'number', 'date', 'select', 'checkbox', 'relation')),
+  options JSONB, -- For select type columns and relation configuration
   column_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -43,11 +43,23 @@ CREATE TABLE IF NOT EXISTS spreadsheet_cells (
   UNIQUE(row_id, column_id)
 );
 
+-- Create spreadsheet_relations table for storing relation values
+CREATE TABLE IF NOT EXISTS spreadsheet_relations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  row_id UUID REFERENCES spreadsheet_rows(id) ON DELETE CASCADE,
+  column_id UUID REFERENCES spreadsheet_columns(id) ON DELETE CASCADE,
+  related_row_id UUID REFERENCES spreadsheet_rows(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(row_id, column_id, related_row_id)
+);
+
 -- Enable RLS on all tables
 ALTER TABLE spreadsheets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE spreadsheet_columns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE spreadsheet_rows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE spreadsheet_cells ENABLE ROW LEVEL SECURITY;
+ALTER TABLE spreadsheet_relations ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for spreadsheets
 CREATE POLICY "Users can view their own spreadsheets" ON spreadsheets
@@ -177,9 +189,53 @@ CREATE POLICY "Users can delete cells of their spreadsheets" ON spreadsheet_cell
     )
   );
 
+-- Create RLS policies for spreadsheet_relations
+CREATE POLICY "Users can view relations of their spreadsheets" ON spreadsheet_relations
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM spreadsheet_rows sr
+      JOIN spreadsheets s ON s.id = sr.spreadsheet_id
+      WHERE sr.id = spreadsheet_relations.row_id 
+      AND s.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert relations to their spreadsheets" ON spreadsheet_relations
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM spreadsheet_rows sr
+      JOIN spreadsheets s ON s.id = sr.spreadsheet_id
+      WHERE sr.id = spreadsheet_relations.row_id 
+      AND s.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update relations of their spreadsheets" ON spreadsheet_relations
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM spreadsheet_rows sr
+      JOIN spreadsheets s ON s.id = sr.spreadsheet_id
+      WHERE sr.id = spreadsheet_relations.row_id 
+      AND s.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete relations of their spreadsheets" ON spreadsheet_relations
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM spreadsheet_rows sr
+      JOIN spreadsheets s ON s.id = sr.spreadsheet_id
+      WHERE sr.id = spreadsheet_relations.row_id 
+      AND s.user_id = auth.uid()
+    )
+  );
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_spreadsheets_user_id ON spreadsheets(user_id);
 CREATE INDEX IF NOT EXISTS idx_spreadsheet_columns_spreadsheet_id ON spreadsheet_columns(spreadsheet_id);
 CREATE INDEX IF NOT EXISTS idx_spreadsheet_rows_spreadsheet_id ON spreadsheet_rows(spreadsheet_id);
 CREATE INDEX IF NOT EXISTS idx_spreadsheet_cells_row_id ON spreadsheet_cells(row_id);
 CREATE INDEX IF NOT EXISTS idx_spreadsheet_cells_column_id ON spreadsheet_cells(column_id);
+CREATE INDEX IF NOT EXISTS idx_spreadsheet_relations_row_id ON spreadsheet_relations(row_id);
+CREATE INDEX IF NOT EXISTS idx_spreadsheet_relations_column_id ON spreadsheet_relations(column_id);
+CREATE INDEX IF NOT EXISTS idx_spreadsheet_relations_related_row_id ON spreadsheet_relations(related_row_id);

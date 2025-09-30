@@ -4,6 +4,7 @@ import type {
   SpreadsheetColumn,
   SpreadsheetRow,
   SpreadsheetCell,
+  SpreadsheetRelation,
   SpreadsheetWithColumns,
   SpreadsheetWithData,
   CreateSpreadsheetRequest,
@@ -12,6 +13,7 @@ import type {
   UpdateColumnRequest,
   CreateRowRequest,
   UpdateCellRequest,
+  UpdateRelationRequest,
 } from './types';
 
 export class DatabaseClient {
@@ -258,12 +260,20 @@ export class DatabaseClient {
     if (spreadsheetError) throw spreadsheetError;
     if (!spreadsheetData) return null;
 
-    // Get rows with cells
+    // Get rows with cells and relations (including related row data)
     const { data: rowsData, error: rowsError } = await supabase
       .from('spreadsheet_rows')
       .select(`
         *,
-        cells:spreadsheet_cells(*)
+        cells:spreadsheet_cells(*),
+        relations:spreadsheet_relations!spreadsheet_relations_row_id_fkey(
+          *,
+          related_row:spreadsheet_rows!spreadsheet_relations_related_row_id_fkey(
+            id,
+            row_order,
+            cells:spreadsheet_cells!inner(value)
+          )
+        )
       `)
       .eq('spreadsheet_id', id)
       .order('row_order', { ascending: true });
@@ -304,6 +314,85 @@ export class DatabaseClient {
       .eq('column_id', columnId);
 
     if (error) throw error;
+  }
+
+  // Relation operations
+  async upsertRelations(rowId: string, columnId: string, request: UpdateRelationRequest): Promise<void> {
+    const supabase = await this.getSupabase();
+    
+    // First, delete existing relations for this row/column combination
+    await supabase
+      .from('spreadsheet_relations')
+      .delete()
+      .eq('row_id', rowId)
+      .eq('column_id', columnId);
+
+    // Then insert new relations
+    if (request.relatedRowIds.length > 0) {
+      const relationsToInsert = request.relatedRowIds.map(relatedRowId => ({
+        row_id: rowId,
+        column_id: columnId,
+        related_row_id: relatedRowId
+      }));
+
+      const { error } = await supabase
+        .from('spreadsheet_relations')
+        .insert(relationsToInsert);
+
+      if (error) throw error;
+    }
+  }
+
+  async getRelatedRows(rowId: string, columnId: string): Promise<SpreadsheetRelation[]> {
+    const supabase = await this.getSupabase();
+    const { data, error } = await supabase
+      .from('spreadsheet_relations')
+      .select('*')
+      .eq('row_id', rowId)
+      .eq('column_id', columnId);
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getAvailableRowsForRelation(targetSpreadsheetId: string, excludeRowId?: string): Promise<Array<{ id: string; row_order: number; first_column_value?: string }>> {
+    const supabase = await this.getSupabase();
+    
+    // First get the first column of the target spreadsheet
+    const { data: firstColumn, error: columnError } = await supabase
+      .from('spreadsheet_columns')
+      .select('id')
+      .eq('spreadsheet_id', targetSpreadsheetId)
+      .order('column_order', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (columnError) throw columnError;
+
+    let query = supabase
+      .from('spreadsheet_rows')
+      .select(`
+        id,
+        row_order,
+        cells:spreadsheet_cells!inner(value)
+      `)
+      .eq('spreadsheet_id', targetSpreadsheetId)
+      .eq('cells.column_id', firstColumn?.id || '')
+      .order('row_order', { ascending: true });
+
+    if (excludeRowId) {
+      query = query.neq('id', excludeRowId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    // Transform the data to include the first column value
+    return (data || []).map(row => ({
+      id: row.id,
+      row_order: row.row_order,
+      first_column_value: row.cells?.[0]?.value || `Row ${row.row_order + 1}`
+    }));
   }
 }
 

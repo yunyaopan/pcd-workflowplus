@@ -9,26 +9,45 @@ import type {
   SpreadsheetWithData, 
   SpreadsheetColumn, 
   SpreadsheetRow, 
-  SpreadsheetCell 
+  SpreadsheetCell,
+  SpreadsheetRelation,
+  SpreadsheetRelationWithData,
+  RelationOptions
 } from '@/lib/database/types';
 
 interface ColumnEditorProps {
   column?: SpreadsheetColumn | null;
   onClose: () => void;
-  onSave: (data: { name: string; data_type: string; options?: string[] }) => void;
+  onSave: (data: { name: string; data_type: string; options?: string[] | RelationOptions }) => void;
+  availableSpreadsheets?: Array<{ id: string; name: string }>;
 }
 
-function ColumnEditor({ column, onClose, onSave }: ColumnEditorProps) {
+function ColumnEditor({ column, onClose, onSave, availableSpreadsheets = [] }: ColumnEditorProps) {
   const [name, setName] = useState(column?.name || '');
   const [type, setType] = useState(column?.data_type || 'text');
-  const [options, setOptions] = useState(column?.options?.join(', ') || '');
+  const [options, setOptions] = useState(
+    Array.isArray(column?.options) ? column.options.join(', ') : ''
+  );
+  const [relationTargetSpreadsheet, setRelationTargetSpreadsheet] = useState(
+    (column?.options as RelationOptions)?.target_spreadsheet_id || ''
+  );
 
   const handleSave = () => {
     if (name.trim()) {
+      let optionsData: string[] | RelationOptions | undefined;
+      
+      if (type === 'select') {
+        optionsData = options.split(',').map((o: string) => o.trim()).filter((o: string) => o);
+      } else if (type === 'relation') {
+        optionsData = {
+          target_spreadsheet_id: relationTargetSpreadsheet
+        };
+      }
+      
       onSave({
         name: name.trim(),
         data_type: type,
-        ...(type === 'select' && { options: options.split(',').map(o => o.trim()).filter(o => o) })
+        ...(optionsData && { options: optionsData })
       });
     }
   };
@@ -59,7 +78,7 @@ function ColumnEditor({ column, onClose, onSave }: ColumnEditorProps) {
             <select
               id="type"
               value={type}
-              onChange={(e) => setType(e.target.value as 'text' | 'number' | 'date' | 'select' | 'checkbox')}
+              onChange={(e) => setType(e.target.value as 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'relation')}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="text">Text</option>
@@ -67,6 +86,7 @@ function ColumnEditor({ column, onClose, onSave }: ColumnEditorProps) {
               <option value="date">Date</option>
               <option value="select">Dropdown</option>
               <option value="checkbox">Checkbox</option>
+              <option value="relation">Relation</option>
             </select>
           </div>
           
@@ -79,6 +99,25 @@ function ColumnEditor({ column, onClose, onSave }: ColumnEditorProps) {
                 onChange={(e) => setOptions(e.target.value)}
                 placeholder="Option1, Option2, Option3"
               />
+            </div>
+          )}
+          
+          {type === 'relation' && (
+            <div>
+              <Label htmlFor="targetSpreadsheet">Target Spreadsheet</Label>
+              <select
+                id="targetSpreadsheet"
+                value={relationTargetSpreadsheet}
+                onChange={(e) => setRelationTargetSpreadsheet(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select a spreadsheet...</option>
+                {availableSpreadsheets.map(spreadsheet => (
+                  <option key={spreadsheet.id} value={spreadsheet.id}>
+                    {spreadsheet.name}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
         </div>
@@ -96,6 +135,127 @@ function ColumnEditor({ column, onClose, onSave }: ColumnEditorProps) {
   );
 }
 
+interface RelationCellProps {
+  column: SpreadsheetColumn;
+  relations: SpreadsheetRelationWithData[];
+  onUpdate: (relatedRowIds: string[]) => void;
+  availableSpreadsheets: Array<{ id: string; name: string }>;
+}
+
+function RelationCell({ column, relations, onUpdate, availableSpreadsheets }: RelationCellProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [availableRows, setAvailableRows] = useState<Array<{ id: string; row_order: number; first_column_value?: string }>>([]);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+
+  const relationOptions = column.options as RelationOptions;
+  const targetSpreadsheet = availableSpreadsheets.find(s => s.id === relationOptions?.target_spreadsheet_id);
+
+  useEffect(() => {
+    if (isOpen && relationOptions?.target_spreadsheet_id) {
+      fetchAvailableRows();
+    }
+  }, [isOpen, relationOptions?.target_spreadsheet_id]);
+
+  useEffect(() => {
+    setSelectedRows(relations.map(r => r.related_row_id));
+  }, [relations]);
+
+  const fetchAvailableRows = async () => {
+    try {
+      const response = await fetch(`/api/spreadsheets/${relationOptions.target_spreadsheet_id}/available-rows`);
+      if (response.ok) {
+        const rows = await response.json();
+        setAvailableRows(rows);
+      }
+    } catch (error) {
+      console.error('Error fetching available rows:', error);
+    }
+  };
+
+  const handleSave = () => {
+    onUpdate(selectedRows);
+    setIsOpen(false);
+  };
+
+  const toggleRow = (rowId: string) => {
+    setSelectedRows(prev => 
+      prev.includes(rowId) 
+        ? prev.filter(id => id !== rowId)
+        : [...prev, rowId]
+    );
+  };
+
+  if (!targetSpreadsheet) {
+    return <div className="text-gray-400 text-sm">No target spreadsheet</div>;
+  }
+
+  // Get the display text for related rows
+  const getRelatedRowsDisplay = () => {
+    if (relations.length === 0) return 'Select...';
+    
+    const relatedRowValues = relations
+      .map(relation => {
+        if (relation.related_row?.cells?.[0]?.value) {
+          return relation.related_row.cells[0].value;
+        }
+        return `Row ${relation.related_row?.row_order ? relation.related_row.row_order + 1 : '?'}`;
+      })
+      .join(', ');
+    
+    return relatedRowValues.length > 50 
+      ? `${relatedRowValues.substring(0, 50)}...` 
+      : relatedRowValues;
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(true)}
+        className="w-full px-2 py-1 text-left border-0 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white hover:bg-gray-50"
+        title={relations.length > 0 ? relations.map(r => r.related_row?.cells?.[0]?.value || `Row ${r.related_row?.row_order ? r.related_row.row_order + 1 : '?'}`).join(', ') : ''}
+      >
+        {getRelatedRowsDisplay()}
+      </button>
+      
+      {isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 shadow-xl max-h-96 overflow-hidden">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Select from {targetSpreadsheet.name}</h3>
+              <button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-gray-700">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+              {availableRows.map(row => (
+                <label key={row.id} className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedRows.includes(row.id)}
+                    onChange={() => toggleRow(row.id)}
+                    className="rounded"
+                  />
+                  <span className="text-sm">{row.first_column_value || `Row ${row.row_order + 1}`}</span>
+                </label>
+              ))}
+            </div>
+            
+            <div className="flex gap-2">
+              <Button onClick={handleSave} className="flex-1">
+                Save
+              </Button>
+              <Button variant="outline" onClick={() => setIsOpen(false)} className="flex-1">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface SpreadsheetEditorProps {
   spreadsheetId: string;
 }
@@ -105,6 +265,21 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
   const [loading, setLoading] = useState(true);
   const [editingColumn, setEditingColumn] = useState<SpreadsheetColumn | null>(null);
   const [showColumnEditor, setShowColumnEditor] = useState(false);
+  const [availableSpreadsheets, setAvailableSpreadsheets] = useState<Array<{ id: string; name: string }>>([]);
+
+  const fetchAvailableSpreadsheets = useCallback(async () => {
+    try {
+      const response = await fetch('/api/spreadsheets');
+      if (response.ok) {
+        const spreadsheets = await response.json();
+        // Filter out the current spreadsheet
+        const filtered = spreadsheets.filter((s: any) => s.id !== spreadsheetId);
+        setAvailableSpreadsheets(filtered);
+      }
+    } catch (error) {
+      console.error('Error fetching available spreadsheets:', error);
+    }
+  }, [spreadsheetId]);
 
   const fetchSpreadsheet = useCallback(async () => {
     try {
@@ -122,9 +297,10 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
 
   useEffect(() => {
     fetchSpreadsheet();
-  }, [fetchSpreadsheet]);
+    fetchAvailableSpreadsheets();
+  }, [fetchSpreadsheet, fetchAvailableSpreadsheets]);
 
-  const handleAddColumn = async (data: { name: string; data_type: string; options?: string[] }) => {
+  const handleAddColumn = async (data: { name: string; data_type: string; options?: string[] | RelationOptions }) => {
     try {
       const response = await fetch(`/api/spreadsheets/${spreadsheetId}/columns`, {
         method: 'POST',
@@ -142,7 +318,7 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
     }
   };
 
-  const handleUpdateColumn = async (columnId: string, data: { name: string; data_type: string; options?: string[] }) => {
+  const handleUpdateColumn = async (columnId: string, data: { name: string; data_type: string; options?: string[] | RelationOptions }) => {
     try {
       const response = await fetch(`/api/spreadsheets/${spreadsheetId}/columns/${columnId}`, {
         method: 'PUT',
@@ -214,6 +390,24 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
     }
   };
 
+  const handleUpdateRelation = async (rowId: string, columnId: string, relatedRowIds: string[]) => {
+    try {
+      const response = await fetch(`/api/spreadsheets/${spreadsheetId}/relations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ rowId, columnId, relatedRowIds }),
+      });
+
+      if (response.ok) {
+        await fetchSpreadsheet();
+      }
+    } catch (error) {
+      console.error('Error updating relation:', error);
+    }
+  };
+
   const handleUpdateCell = async (rowId: string, columnId: string, value: string) => {
     try {
       const response = await fetch(`/api/spreadsheets/${spreadsheetId}/cells`, {
@@ -233,9 +427,10 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
     }
   };
 
-  const renderCell = (row: SpreadsheetRow & { cells: SpreadsheetCell[] }, col: SpreadsheetColumn) => {
+  const renderCell = (row: SpreadsheetRow & { cells: SpreadsheetCell[]; relations: SpreadsheetRelationWithData[] }, col: SpreadsheetColumn) => {
     const cell = row.cells.find(c => c.column_id === col.id);
     const value = cell?.value || '';
+    const relations = row.relations.filter(r => r.column_id === col.id);
     
     switch(col.data_type) {
       case 'text':
@@ -288,7 +483,7 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
             className="w-full px-2 py-1 border-0 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
           >
             <option value="">Select...</option>
-            {col.options?.map(opt => (
+            {Array.isArray(col.options) && col.options.map((opt: string) => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
@@ -300,6 +495,15 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
             checked={value === 'true'}
             onChange={(e) => handleUpdateCell(row.id, col.id, e.target.checked.toString())}
             className="ml-2"
+          />
+        );
+      case 'relation':
+        return (
+          <RelationCell
+            column={col}
+            relations={relations}
+            onUpdate={(relatedRowIds) => handleUpdateRelation(row.id, col.id, relatedRowIds)}
+            availableSpreadsheets={availableSpreadsheets}
           />
         );
       default:
@@ -441,6 +645,7 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
       {showColumnEditor && (
         <ColumnEditor
           column={editingColumn}
+          availableSpreadsheets={availableSpreadsheets}
           onClose={() => {
             setShowColumnEditor(false);
             setEditingColumn(null);
