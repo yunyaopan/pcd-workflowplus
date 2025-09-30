@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Settings, X, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import type {
 } from '@/lib/database/types';
 
 interface ColumnEditorProps {
-  column?: SpreadsheetColumn;
+  column?: SpreadsheetColumn | null;
   onClose: () => void;
   onSave: (data: { name: string; data_type: string; options?: string[] }) => void;
 }
@@ -59,7 +59,7 @@ function ColumnEditor({ column, onClose, onSave }: ColumnEditorProps) {
             <select
               id="type"
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              onChange={(e) => setType(e.target.value as 'text' | 'number' | 'date' | 'select' | 'checkbox')}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="text">Text</option>
@@ -106,7 +106,7 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
   const [editingColumn, setEditingColumn] = useState<SpreadsheetColumn | null>(null);
   const [showColumnEditor, setShowColumnEditor] = useState(false);
 
-  const fetchSpreadsheet = async () => {
+  const fetchSpreadsheet = useCallback(async () => {
     try {
       const response = await fetch(`/api/spreadsheets/${spreadsheetId}/data`);
       if (response.ok) {
@@ -118,11 +118,11 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [spreadsheetId]);
 
   useEffect(() => {
     fetchSpreadsheet();
-  }, [spreadsheetId]);
+  }, [fetchSpreadsheet]);
 
   const handleAddColumn = async (data: { name: string; data_type: string; options?: string[] }) => {
     try {
