@@ -55,12 +55,20 @@ interface UnifiedTableProps {
     type: DataType;
     logic?: string;
     options?: string[];
+    modalPosition?: {
+      x: number;
+      y: number;
+    };
   } | null;
   setEditingColumnData: (data: {
     id: number;
     type: DataType;
     logic?: string;
     options?: string[];
+    modalPosition?: {
+      x: number;
+      y: number;
+    };
   } | null) => void;
   onUpdateInputColumnType?: (tableId: number, colId: number, type: DataType, options?: string[]) => void;
   onUpdateOutputColumnType?: (colId: number, type: DataType, logic?: string, options?: string[]) => void;
@@ -116,9 +124,6 @@ export function UnifiedTableComponent({
   onUpdateInputColumnType,
   onUpdateOutputColumnType,
 }: UnifiedTableProps) {
-  const table = isOutput ? outputTable : inputTable;
-  if (!table) return null;
-
   // Use useEffect to ensure we have the correct viewport dimensions for positioning
   const [viewportDimensions, setViewportDimensions] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1024,
@@ -139,6 +144,9 @@ export function UnifiedTableComponent({
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
+  const table = isOutput ? outputTable : inputTable;
+  if (!table) return null;
+
   const handleColumnTypeEdit = (col: Column, event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect();
     setEditingColumnData({
@@ -146,16 +154,12 @@ export function UnifiedTableComponent({
       type: col.type,
       logic: col.logic,
       options: col.options,
-    });
-    setEditingColumnType(true);
-    // Store the position for the modal
-    setEditingColumnData(prev => ({
-      ...prev,
       modalPosition: {
         x: rect.left,
         y: rect.bottom + 4
       }
-    }));
+    });
+    setEditingColumnType(true);
   };
 
   const handleColumnTypeUpdate = () => {
