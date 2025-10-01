@@ -62,9 +62,10 @@ export function useLogicGenerator() {
   const [isLoading, setIsLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [saveName, setSaveName] = useState('');
-  const [saveDescription, setSaveDescription] = useState('');
+  const [currentTransformationId, setCurrentTransformationId] = useState<string | null>(null);
+  const [transformationName, setTransformationName] = useState('Untitled Transformation');
+  const [transformationDescription, setTransformationDescription] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
 
   // Check API key status on component mount
   useEffect(() => {
@@ -110,7 +111,7 @@ export function useLogicGenerator() {
 
   // Save transformation
   const saveTransformation = async () => {
-    if (!saveName.trim()) {
+    if (!transformationName.trim()) {
       setSaveError('Please enter a name for the transformation');
       return;
     }
@@ -119,17 +120,26 @@ export function useLogicGenerator() {
     setSaveError(null);
 
     try {
-      await transformationsAPI.createTransformation({
-        name: saveName.trim(),
-        description: saveDescription.trim() || undefined,
-        input_tables: inputTables,
-        input_params: inputParams,
-        output_table: outputTable,
-      });
-
-      setShowSaveModal(false);
-      setSaveName('');
-      setSaveDescription('');
+      if (currentTransformationId) {
+        // Update existing transformation
+        await transformationsAPI.updateTransformation(currentTransformationId, {
+          name: transformationName.trim(),
+          description: transformationDescription.trim() || undefined,
+          input_tables: inputTables,
+          input_params: inputParams,
+          output_table: outputTable,
+        });
+      } else {
+        // Create new transformation
+        const response = await transformationsAPI.createTransformation({
+          name: transformationName.trim(),
+          description: transformationDescription.trim() || undefined,
+          input_tables: inputTables,
+          input_params: inputParams,
+          output_table: outputTable,
+        });
+        setCurrentTransformationId(response.transformation.id);
+      }
       
       alert('Transformation saved successfully!');
     } catch (error) {
@@ -148,6 +158,9 @@ export function useLogicGenerator() {
       const response = await transformationsAPI.getTransformation(id);
       const transformation = response.transformation;
 
+      setCurrentTransformationId(transformation.id);
+      setTransformationName(transformation.name);
+      setTransformationDescription(transformation.description || '');
       setInputTables(transformation.input_tables);
       setInputParams(transformation.input_params);
       setOutputTable(transformation.output_table);
@@ -222,12 +235,13 @@ export function useLogicGenerator() {
     setSaveError,
     loadError,
     setLoadError,
-    showSaveModal,
-    setShowSaveModal,
-    saveName,
-    setSaveName,
-    saveDescription,
-    setSaveDescription,
+    currentTransformationId,
+    transformationName,
+    setTransformationName,
+    transformationDescription,
+    setTransformationDescription,
+    isEditingName,
+    setIsEditingName,
     
     // Actions
     testOpenRouterConnection,

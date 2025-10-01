@@ -1,4 +1,4 @@
-import { Play, Save, FolderOpen, AlertCircle } from 'lucide-react';
+import { Play, Save, FolderOpen, AlertCircle, Edit2, Check, X } from 'lucide-react';
 
 interface HeaderProps {
   apiKeyStatus: 'checking' | 'valid' | 'missing';
@@ -8,8 +8,13 @@ interface HeaderProps {
   isLoading: boolean;
   saveError: string | null;
   loadError: string | null;
+  currentTransformationId: string | null;
+  transformationName: string;
+  setTransformationName: (name: string) => void;
+  isEditingName: boolean;
+  setIsEditingName: (editing: boolean) => void;
   onTestConnection: () => void;
-  onShowSaveModal: () => void;
+  onSaveTransformation: () => void;
 }
 
 export function Header({
@@ -20,13 +25,76 @@ export function Header({
   isLoading,
   saveError,
   loadError,
+  currentTransformationId,
+  transformationName,
+  setTransformationName,
+  isEditingName,
+  setIsEditingName,
   onTestConnection,
-  onShowSaveModal,
+  onSaveTransformation,
 }: HeaderProps) {
+  const handleNameEdit = () => {
+    setIsEditingName(true);
+  };
+
+  const handleNameSave = () => {
+    setIsEditingName(false);
+  };
+
+  const handleNameCancel = () => {
+    setIsEditingName(false);
+  };
+
   return (
     <div className="text-center mb-8">
       <h1 className="text-4xl font-bold text-gray-900 mb-2">Natural Language Logic Generator</h1>
       <p className="text-gray-600">Define your inputs and outputs, describe the logic in plain English, and generate Next.js code</p>
+      
+      {/* Transformation Name Editor */}
+      <div className="mt-6 flex justify-center">
+        <div className="flex items-center gap-3 bg-white rounded-lg shadow-md px-6 py-3 border">
+          {isEditingName ? (
+            <>
+              <input
+                type="text"
+                value={transformationName}
+                onChange={(e) => setTransformationName(e.target.value)}
+                className="text-lg font-semibold text-gray-900 bg-transparent border-none outline-none focus:ring-0"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleNameSave();
+                  } else if (e.key === 'Escape') {
+                    handleNameCancel();
+                  }
+                }}
+              />
+              <button
+                onClick={handleNameSave}
+                className="text-green-600 hover:text-green-700 transition"
+              >
+                <Check size={16} />
+              </button>
+              <button
+                onClick={handleNameCancel}
+                className="text-red-600 hover:text-red-700 transition"
+              >
+                <X size={16} />
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="text-lg font-semibold text-gray-900">{transformationName}</span>
+              <button
+                onClick={handleNameEdit}
+                className="text-gray-500 hover:text-gray-700 transition"
+              >
+                <Edit2 size={16} />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
       
       {/* API Key Status */}
       {apiKeyStatus === 'missing' && (
@@ -87,12 +155,12 @@ export function Header({
       {/* Save/Load Actions */}
       <div className="mt-6 flex justify-center gap-4">
         <button
-          onClick={onShowSaveModal}
+          onClick={onSaveTransformation}
           disabled={isSaving || isLoading}
           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save size={16} />
-          {isSaving ? 'Saving...' : 'Save Transformation'}
+          {isSaving ? 'Saving...' : currentTransformationId ? 'Update Transformation' : 'Save Transformation'}
         </button>
         <a
           href="/transformations"

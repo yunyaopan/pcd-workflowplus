@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Calendar, Database, Settings, FolderOpen } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Database, Settings } from 'lucide-react';
 import { transformationsAPI } from '@/lib/api/transformations';
 import { Transformation } from '@/lib/database/types';
 import Link from 'next/link';
@@ -11,11 +11,6 @@ export default function TransformationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [editingTransformation, setEditingTransformation] = useState<Transformation | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [updateError, setUpdateError] = useState<string | null>(null);
 
   useEffect(() => {
     loadTransformations();
@@ -44,41 +39,6 @@ export default function TransformationsPage() {
     }
   };
 
-  const handleEdit = (transformation: Transformation) => {
-    setEditingTransformation(transformation);
-    setEditName(transformation.name);
-    setEditDescription(transformation.description || '');
-    setUpdateError(null);
-  };
-
-  const handleUpdate = async () => {
-    if (!editingTransformation || !editName.trim()) {
-      setUpdateError('Please enter a name for the transformation');
-      return;
-    }
-
-    setIsUpdating(true);
-    setUpdateError(null);
-
-    try {
-      const updatedTransformation = await transformationsAPI.updateTransformation(editingTransformation.id, {
-        name: editName.trim(),
-        description: editDescription.trim() || undefined,
-      });
-
-      setTransformations(transformations.map(t => 
-        t.id === editingTransformation.id ? updatedTransformation.transformation : t
-      ));
-      
-      setEditingTransformation(null);
-      setEditName('');
-      setEditDescription('');
-    } catch (err) {
-      setUpdateError(err instanceof Error ? err.message : 'Failed to update transformation');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -171,18 +131,11 @@ export default function TransformationsPage() {
                   <div className="flex gap-1 ml-2">
                     <Link
                       href={`/logic-generator?load=${transformation.id}`}
-                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                      title="Load transformation"
-                    >
-                      <FolderOpen size={16} />
-                    </Link>
-                    <button
-                      onClick={() => handleEdit(transformation)}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
                       title="Edit transformation"
                     >
                       <Edit size={16} />
-                    </button>
+                    </Link>
                     <button
                       onClick={() => setDeleteConfirm(transformation.id)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
@@ -219,7 +172,7 @@ export default function TransformationsPage() {
                     href={`/logic-generator?load=${transformation.id}`}
                     className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                   >
-                    Load →
+                    Edit →
                   </Link>
                 </div>
               </div>
@@ -253,71 +206,6 @@ export default function TransformationsPage() {
           </div>
         )}
 
-        {/* Edit Modal */}
-        {editingTransformation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Transformation</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    placeholder="Enter transformation name"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    autoFocus
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    placeholder="Enter description (optional)"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    rows={3}
-                  />
-                </div>
-              </div>
-
-              {updateError && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-700 text-sm">{updateError}</p>
-                </div>
-              )}
-
-              <div className="flex gap-3 justify-end mt-6">
-                <button
-                  onClick={() => {
-                    setEditingTransformation(null);
-                    setEditName('');
-                    setEditDescription('');
-                    setUpdateError(null);
-                  }}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition"
-                  disabled={isUpdating}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleUpdate}
-                  disabled={isUpdating || !editName.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isUpdating ? 'Updating...' : 'Update'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -34,7 +34,6 @@ import { InputParameters } from '@/components/logic-generator/input-parameters';
 import { ActionButtons } from '@/components/logic-generator/action-buttons';
 import { GeneratedCode } from '@/components/logic-generator/generated-code';
 import { TestResultsComponent } from '@/components/logic-generator/test-results';
-import { SaveModal } from '@/components/logic-generator/save-modal';
 
 function LogicGeneratorContent() {
   const {
@@ -78,14 +77,12 @@ function LogicGeneratorContent() {
     isSaving,
     isLoading,
     saveError,
-    setSaveError,
     loadError,
-    showSaveModal,
-    setShowSaveModal,
-    saveName,
-    setSaveName,
-    saveDescription,
-    setSaveDescription,
+    currentTransformationId,
+    transformationName,
+    setTransformationName,
+    isEditingName,
+    setIsEditingName,
     
     // Actions
     testOpenRouterConnection,
@@ -256,12 +253,6 @@ function LogicGeneratorContent() {
     setNewColumnIsLLM(false);
   };
 
-  const handleSaveModalCancel = () => {
-    setShowSaveModal(false);
-    setSaveName('');
-    setSaveDescription('');
-    setSaveError(null);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
@@ -274,8 +265,13 @@ function LogicGeneratorContent() {
           isLoading={isLoading}
           saveError={saveError}
           loadError={loadError}
+          currentTransformationId={currentTransformationId}
+          transformationName={transformationName}
+          setTransformationName={setTransformationName}
+          isEditingName={isEditingName}
+          setIsEditingName={setIsEditingName}
           onTestConnection={testOpenRouterConnection}
-          onShowSaveModal={() => setShowSaveModal(true)}
+          onSaveTransformation={saveTransformation}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -414,17 +410,6 @@ function LogicGeneratorContent() {
       </div>
 
 
-      <SaveModal
-        showSaveModal={showSaveModal}
-        saveName={saveName}
-        setSaveName={setSaveName}
-        saveDescription={saveDescription}
-        setSaveDescription={setSaveDescription}
-        saveError={saveError}
-        isSaving={isSaving}
-        onSave={saveTransformation}
-        onCancel={handleSaveModalCancel}
-      />
     </div>
   );
 }
