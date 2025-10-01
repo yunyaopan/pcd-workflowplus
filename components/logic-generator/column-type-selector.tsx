@@ -1,3 +1,4 @@
+import React from 'react';
 import { DATA_TYPES } from '@/lib/types/logic-generator';
 import type { DataType, ColumnMenuPosition } from '@/lib/types/logic-generator';
 
@@ -28,21 +29,44 @@ export function ColumnTypeSelector({
 }: ColumnTypeSelectorProps) {
   // Calculate if menu would go off-screen and adjust
   const menuWidth = 320;
-  const menuHeight = 280; // Approximate height of the menu
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+  const menuHeight = isOutput ? 380 : 280; // Approximate height of the menu
+  
+  // Use useEffect to ensure we have the correct viewport dimensions
+  const [viewportDimensions, setViewportDimensions] = React.useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1024,
+    height: typeof window !== 'undefined' ? window.innerHeight : 768
+  });
+
+  React.useEffect(() => {
+    const updateDimensions = () => {
+      setViewportDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', updateDimensions);
+    updateDimensions(); // Set initial dimensions
+
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+
   let adjustedX = position.x;
   let adjustedY = position.y;
   
   // Adjust horizontal position if menu would go off-screen
-  if (adjustedX + menuWidth > viewportWidth - 20) {
-    adjustedX = viewportWidth - menuWidth - 20;
+  if (adjustedX + menuWidth > viewportDimensions.width - 20) {
+    adjustedX = viewportDimensions.width - menuWidth - 20;
   }
   
   // Adjust vertical position if menu would go off-screen
-  if (adjustedY + menuHeight > viewportHeight - 20) {
+  if (adjustedY + menuHeight > viewportDimensions.height - 20) {
     // Position above the button instead of below
     adjustedY = position.y - menuHeight - 8;
+    // If still off-screen above, position at top of viewport
+    if (adjustedY < 20) {
+      adjustedY = 20;
+    }
   }
   
   return (

@@ -47,6 +47,15 @@ export function useLogicGenerator() {
   const [newColumnLogic, setNewColumnLogic] = useState('');
   const [columnMenuPosition, setColumnMenuPosition] = useState<ColumnMenuPosition>({ x: 0, y: 0 });
   
+  // Column type editing state
+  const [editingColumnType, setEditingColumnType] = useState(false);
+  const [editingColumnData, setEditingColumnData] = useState<{
+    id: number;
+    type: DataType;
+    logic?: string;
+    options?: string[];
+  } | null>(null);
+  
   // Save/Load state
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -200,6 +209,10 @@ export function useLogicGenerator() {
     setNewColumnLogic,
     columnMenuPosition,
     setColumnMenuPosition,
+    editingColumnType,
+    setEditingColumnType,
+    editingColumnData,
+    setEditingColumnData,
     isSaving,
     isLoading,
     saveError,

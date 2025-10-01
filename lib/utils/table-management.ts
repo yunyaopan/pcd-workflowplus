@@ -105,6 +105,49 @@ export function updateInputTableColumnName(
   );
 }
 
+export function updateInputTableColumnType(
+  inputTables: InputTable[], 
+  tableId: number, 
+  colId: number, 
+  type: DataType,
+  options?: string[]
+): InputTable[] {
+  return inputTables.map(t => {
+    if (t.id === tableId) {
+      const updatedColumns = t.columns.map(c => 
+        c.id === colId 
+          ? { 
+              ...c, 
+              type, 
+              ...(type === 'select' && options ? { options } : type !== 'select' ? { options: undefined } : {})
+            } 
+          : c
+      );
+      
+      // Update existing cell values to match new type
+      const updatedRows = t.rows.map(row => {
+        const currentValue = row[colId];
+        let newValue: unknown;
+        
+        if (type === 'boolean') {
+          newValue = typeof currentValue === 'boolean' ? currentValue : false;
+        } else if (type === 'number') {
+          newValue = typeof currentValue === 'number' || !isNaN(Number(currentValue)) ? String(currentValue) : '0';
+        } else if (type === 'select') {
+          newValue = options && options.includes(String(currentValue)) ? currentValue : (options?.[0] || '');
+        } else {
+          newValue = String(currentValue || '');
+        }
+        
+        return { ...row, [colId]: newValue };
+      });
+      
+      return { ...t, columns: updatedColumns, rows: updatedRows };
+    }
+    return t;
+  });
+}
+
 // Input Parameters Management
 export function addInputParam(inputParams: InputParam[]): InputParam[] {
   return [...inputParams, { 
@@ -193,5 +236,48 @@ export function updateOutputColumnName(outputTable: OutputTable, colId: number, 
   return {
     ...outputTable,
     columns: outputTable.columns.map(c => c.id === colId ? { ...c, name } : c)
+  };
+}
+
+export function updateOutputTableColumnType(
+  outputTable: OutputTable, 
+  colId: number, 
+  type: DataType,
+  logic?: string,
+  options?: string[]
+): OutputTable {
+  const updatedColumns = outputTable.columns.map(c => 
+    c.id === colId 
+      ? { 
+          ...c, 
+          type, 
+          logic,
+          ...(type === 'select' && options ? { options } : type !== 'select' ? { options: undefined } : {})
+        } 
+      : c
+  );
+  
+  // Update existing cell values to match new type
+  const updatedRows = outputTable.rows.map(row => {
+    const currentValue = row[colId];
+    let newValue: unknown;
+    
+    if (type === 'boolean') {
+      newValue = typeof currentValue === 'boolean' ? currentValue : false;
+    } else if (type === 'number') {
+      newValue = typeof currentValue === 'number' || !isNaN(Number(currentValue)) ? String(currentValue) : '0';
+    } else if (type === 'select') {
+      newValue = options && options.includes(String(currentValue)) ? currentValue : (options?.[0] || '');
+    } else {
+      newValue = String(currentValue || '');
+    }
+    
+    return { ...row, [colId]: newValue };
+  });
+  
+  return {
+    ...outputTable,
+    columns: updatedColumns,
+    rows: updatedRows
   };
 }

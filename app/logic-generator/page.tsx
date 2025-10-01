@@ -4,6 +4,7 @@ import React, { Suspense } from 'react';
 import { Plus } from 'lucide-react';
 import { useLogicGenerator } from '@/lib/hooks/use-logic-generator';
 import { generateCode, testGeneratedCode } from '@/lib/utils/code-generation';
+import type { DataType } from '@/lib/types/logic-generator';
 import {
   addInputTable,
   removeInputTable,
@@ -14,6 +15,7 @@ import {
   removeTableRow,
   updateTableCell,
   updateInputTableColumnName,
+  updateInputTableColumnType,
   addInputParam,
   removeInputParam,
   updateInputParam,
@@ -23,15 +25,14 @@ import {
   removeOutputRow,
   updateOutputCell,
   updateOutputColumnName,
+  updateOutputTableColumnType,
 } from '@/lib/utils/table-management';
 import { Header } from '@/components/logic-generator/header';
-import { InputTableComponent } from '@/components/logic-generator/input-table';
+import { UnifiedTableComponent } from '@/components/logic-generator/unified-table';
 import { InputParameters } from '@/components/logic-generator/input-parameters';
-import { OutputTableComponent } from '@/components/logic-generator/output-table';
 import { ActionButtons } from '@/components/logic-generator/action-buttons';
 import { GeneratedCode } from '@/components/logic-generator/generated-code';
 import { TestResultsComponent } from '@/components/logic-generator/test-results';
-import { ColumnTypeSelector } from '@/components/logic-generator/column-type-selector';
 import { SaveModal } from '@/components/logic-generator/save-modal';
 
 function LogicGeneratorContent() {
@@ -67,6 +68,10 @@ function LogicGeneratorContent() {
     setNewColumnLogic,
     columnMenuPosition,
     setColumnMenuPosition,
+    editingColumnType,
+    setEditingColumnType,
+    editingColumnData,
+    setEditingColumnData,
     isSaving,
     isLoading,
     saveError,
@@ -184,6 +189,14 @@ function LogicGeneratorContent() {
     setOutputTable({ ...outputTable, baseLogic: logic });
   };
 
+  const handleUpdateInputColumnType = (tableId: number, colId: number, type: DataType, options?: string[]) => {
+    setInputTables(updateInputTableColumnType(inputTables, tableId, colId, type, options));
+  };
+
+  const handleUpdateOutputColumnType = (colId: number, type: DataType, logic?: string, options?: string[]) => {
+    setOutputTable(updateOutputTableColumnType(outputTable, colId, type, logic, options));
+  };
+
   // Code generation handlers
   const handleGenerateCode = async () => {
     setIsGenerating(true);
@@ -221,6 +234,15 @@ function LogicGeneratorContent() {
 
   const handleColumnMenuClick = (e: React.MouseEvent, tableId: number | 'output') => {
     const rect = e.currentTarget.getBoundingClientRect();
+    setColumnMenuPosition({
+      x: rect.left,
+      y: rect.bottom + 4
+    });
+    setAddingColumnTo(tableId);
+  };
+
+  const handleAddColumnClick = (tableId: number | 'output', event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
     setColumnMenuPosition({
       x: rect.left,
       y: rect.bottom + 4
@@ -275,19 +297,39 @@ function LogicGeneratorContent() {
 
               <div className="space-y-6">
                 {inputTables.map(table => (
-                  <InputTableComponent
+                  <UnifiedTableComponent
                     key={table.id}
-                    table={table}
+                    isOutput={false}
+                    inputTable={table}
                     editingColumnId={editingColumnId}
                     setEditingColumnId={setEditingColumnId}
-                    onUpdateTableName={handleUpdateTableName}
-                    onRemoveTable={handleRemoveInputTable}
-                    onAddColumn={(tableId) => handleColumnMenuClick({ currentTarget: { getBoundingClientRect: () => ({ left: 0, bottom: 0 }) } } as any, tableId)}
-                    onRemoveColumn={handleRemoveTableColumn}
-                    onUpdateColumnName={handleUpdateInputTableColumnName}
-                    onAddRow={handleAddTableRow}
-                    onRemoveRow={handleRemoveTableRow}
-                    onUpdateCell={handleUpdateTableCell}
+                    onUpdateInputTableName={handleUpdateTableName}
+                    onRemoveInputTable={handleRemoveInputTable}
+                    onAddInputColumn={(tableId, event) => handleAddColumnClick(tableId, event!)}
+                    onRemoveInputColumn={handleRemoveTableColumn}
+                    onUpdateInputColumnName={handleUpdateInputTableColumnName}
+                    onAddInputRow={handleAddTableRow}
+                    onRemoveInputRow={handleRemoveTableRow}
+                    onUpdateInputCell={handleUpdateTableCell}
+                    showColumnTypeSelector={addingColumnTo === table.id}
+                    columnTypeSelectorPosition={columnMenuPosition}
+                    newColumnType={newColumnType}
+                    setNewColumnType={setNewColumnType}
+                    newColumnOptions={newColumnOptions}
+                    setNewColumnOptions={setNewColumnOptions}
+                    newColumnLogic={newColumnLogic}
+                    setNewColumnLogic={setNewColumnLogic}
+                    onAddColumnWithType={() => {
+                      if (typeof addingColumnTo === 'number') {
+                        handleAddInputTableColumn(addingColumnTo);
+                      }
+                    }}
+                    onCloseColumnTypeSelector={handleCloseColumnMenu}
+                    editingColumnType={editingColumnType}
+                    setEditingColumnType={setEditingColumnType}
+                    editingColumnData={editingColumnData}
+                    setEditingColumnData={setEditingColumnData}
+                    onUpdateInputColumnType={handleUpdateInputColumnType}
                   />
                 ))}
 
@@ -308,18 +350,38 @@ function LogicGeneratorContent() {
 
           {/* Right Column: Output */}
           <div className="space-y-6">
-            <OutputTableComponent
+            <UnifiedTableComponent
+              isOutput={true}
               outputTable={outputTable}
               editingColumnId={editingColumnId}
               setEditingColumnId={setEditingColumnId}
-              onUpdateTableName={handleUpdateOutputTableName}
+              onUpdateOutputTableName={handleUpdateOutputTableName}
               onUpdateBaseLogic={handleUpdateOutputBaseLogic}
-              onAddColumn={() => handleColumnMenuClick({ currentTarget: { getBoundingClientRect: () => ({ left: 0, bottom: 0 }) } } as any, 'output')}
-              onRemoveColumn={handleRemoveOutputColumn}
-              onUpdateColumnName={handleUpdateOutputColumnName}
-              onAddRow={handleAddOutputRow}
-              onRemoveRow={handleRemoveOutputRow}
-              onUpdateCell={handleUpdateOutputCell}
+              onAddOutputColumn={(event) => handleAddColumnClick('output', event!)}
+              onRemoveOutputColumn={handleRemoveOutputColumn}
+              onUpdateOutputColumnName={handleUpdateOutputColumnName}
+              onAddOutputRow={handleAddOutputRow}
+              onRemoveOutputRow={handleRemoveOutputRow}
+              onUpdateOutputCell={handleUpdateOutputCell}
+              showColumnTypeSelector={addingColumnTo === 'output'}
+              columnTypeSelectorPosition={columnMenuPosition}
+              newColumnType={newColumnType}
+              setNewColumnType={setNewColumnType}
+              newColumnOptions={newColumnOptions}
+              setNewColumnOptions={setNewColumnOptions}
+              newColumnLogic={newColumnLogic}
+              setNewColumnLogic={setNewColumnLogic}
+              onAddColumnWithType={() => {
+                if (addingColumnTo === 'output') {
+                  handleAddOutputColumn();
+                }
+              }}
+              onCloseColumnTypeSelector={handleCloseColumnMenu}
+              editingColumnType={editingColumnType}
+              setEditingColumnType={setEditingColumnType}
+              editingColumnData={editingColumnData}
+              setEditingColumnData={setEditingColumnData}
+              onUpdateOutputColumnType={handleUpdateOutputColumnType}
             />
 
             <ActionButtons
@@ -347,27 +409,6 @@ function LogicGeneratorContent() {
         )}
       </div>
 
-      {/* Column Editor */}
-      {addingColumnTo !== null && (
-        <ColumnTypeSelector
-          isOutput={addingColumnTo === 'output'}
-          position={columnMenuPosition}
-          newColumnType={newColumnType}
-          setNewColumnType={setNewColumnType}
-          newColumnOptions={newColumnOptions}
-          setNewColumnOptions={setNewColumnOptions}
-          newColumnLogic={newColumnLogic}
-          setNewColumnLogic={setNewColumnLogic}
-          onAdd={() => {
-            if (addingColumnTo === 'output') {
-              handleAddOutputColumn();
-            } else {
-              handleAddInputTableColumn(addingColumnTo);
-            }
-          }}
-          onClose={handleCloseColumnMenu}
-        />
-      )}
 
       <SaveModal
         showSaveModal={showSaveModal}
