@@ -27,6 +27,7 @@ interface UnifiedTableProps {
   onAddOutputColumn?: (event?: React.MouseEvent) => void;
   onRemoveOutputColumn?: (colId: number) => void;
   onUpdateOutputColumnName?: (colId: number, name: string) => void;
+  onToggleOutputColumnLLM?: (colId: number) => void;
   onAddOutputRow?: () => void;
   onRemoveOutputRow?: (rowId: number) => void;
   onUpdateOutputCell?: (rowId: number, colId: number, value: unknown) => void;
@@ -40,6 +41,8 @@ interface UnifiedTableProps {
   setNewColumnOptions: (options: string) => void;
   newColumnLogic: string;
   setNewColumnLogic: (logic: string) => void;
+  newColumnIsLLM: boolean;
+  setNewColumnIsLLM: (isLLM: boolean) => void;
   onAddColumnWithType: () => void;
   onCloseColumnTypeSelector: () => void;
   
@@ -80,6 +83,7 @@ export function UnifiedTableComponent({
   onAddOutputColumn,
   onRemoveOutputColumn,
   onUpdateOutputColumnName,
+  onToggleOutputColumnLLM,
   onAddOutputRow,
   onRemoveOutputRow,
   onUpdateOutputCell,
@@ -93,6 +97,8 @@ export function UnifiedTableComponent({
   setNewColumnOptions,
   newColumnLogic,
   setNewColumnLogic,
+  newColumnIsLLM,
+  setNewColumnIsLLM,
   onAddColumnWithType,
   onCloseColumnTypeSelector,
   
@@ -233,7 +239,14 @@ export function UnifiedTableComponent({
                             onClick={() => setEditingColumnId(col.id)}
                             className="cursor-text"
                           >
-                            <div className="font-semibold">{col.name}</div>
+                            <div className="font-semibold flex items-center gap-2">
+                              {col.name}
+                              {isOutput && col.isLLM && (
+                                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
+                                  LLM
+                                </span>
+                              )}
+                            </div>
                             <div className="text-xs text-gray-500 flex items-center gap-1">
                               <span>{getColumnTypeIcon(col.type)}</span>
                               {col.type}
@@ -257,6 +270,22 @@ export function UnifiedTableComponent({
                         >
                           <Edit3 size={14} />
                         </button>
+                        {isOutput && (
+                          <button
+                            onClick={() => onToggleOutputColumnLLM?.(col.id)}
+                            className={`p-1 opacity-0 group-hover:opacity-100 rounded ${
+                              col.isLLM 
+                                ? 'bg-purple-100 text-purple-600' 
+                                : 'hover:bg-gray-100 text-gray-600'
+                            }`}
+                            title={col.isLLM ? 'Mark as deterministic' : 'Mark as LLM-generated'}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-6.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/>
+                              <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-6.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/>
+                            </svg>
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             if (isOutput) {
@@ -365,6 +394,8 @@ export function UnifiedTableComponent({
           setNewColumnOptions={setNewColumnOptions}
           newColumnLogic={newColumnLogic}
           setNewColumnLogic={setNewColumnLogic}
+          newColumnIsLLM={newColumnIsLLM}
+          setNewColumnIsLLM={setNewColumnIsLLM}
         />
       )}
 

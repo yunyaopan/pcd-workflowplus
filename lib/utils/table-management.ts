@@ -172,13 +172,15 @@ export function addOutputColumn(
   outputTable: OutputTable, 
   newColumnType: DataType, 
   newColumnOptions: string, 
-  newColumnLogic: string
+  newColumnLogic: string,
+  newColumnIsLLM: boolean = false
 ): OutputTable {
   const newCol: Column = { 
     id: Date.now(), 
     name: 'New Column', 
     type: newColumnType, 
     logic: newColumnLogic,
+    isLLM: newColumnIsLLM,
     ...(newColumnType === 'select' && { options: newColumnOptions.split(',').map(o => o.trim()).filter(o => o) })
   };
   const newRows = outputTable.rows.map(row => ({ 
@@ -236,6 +238,13 @@ export function updateOutputColumnName(outputTable: OutputTable, colId: number, 
   return {
     ...outputTable,
     columns: outputTable.columns.map(c => c.id === colId ? { ...c, name } : c)
+  };
+}
+
+export function toggleOutputColumnLLM(outputTable: OutputTable, colId: number): OutputTable {
+  return {
+    ...outputTable,
+    columns: outputTable.columns.map(c => c.id === colId ? { ...c, isLLM: !c.isLLM } : c)
   };
 }
 

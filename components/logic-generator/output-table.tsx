@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Brain } from 'lucide-react';
 import { CellRenderer } from './cell-renderer';
 import type { OutputTable, Column } from '@/lib/types/logic-generator';
 
@@ -11,6 +11,7 @@ interface OutputTableProps {
   onAddColumn: () => void;
   onRemoveColumn: (colId: number) => void;
   onUpdateColumnName: (colId: number, name: string) => void;
+  onToggleColumnLLM: (colId: number) => void;
   onAddRow: () => void;
   onRemoveRow: (rowId: number) => void;
   onUpdateCell: (rowId: number, colId: number, value: unknown) => void;
@@ -25,6 +26,7 @@ export function OutputTableComponent({
   onAddColumn,
   onRemoveColumn,
   onUpdateColumnName,
+  onToggleColumnLLM,
   onAddRow,
   onRemoveRow,
   onUpdateCell,
@@ -82,17 +84,37 @@ export function OutputTableComponent({
                             onClick={() => setEditingColumnId(col.id)}
                             className="cursor-text"
                           >
-                            <div className="font-semibold">{col.name}</div>
+                            <div className="font-semibold flex items-center gap-2">
+                              {col.name}
+                              {col.isLLM && (
+                                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
+                                  LLM
+                                </span>
+                              )}
+                            </div>
                             <div className="text-xs text-gray-500">{col.type}</div>
                           </div>
                         )}
                       </div>
-                      <button
-                        onClick={() => onRemoveColumn(col.id)}
-                        className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 text-red-600 rounded"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => onToggleColumnLLM(col.id)}
+                          className={`p-1 opacity-0 group-hover:opacity-100 rounded ${
+                            col.isLLM 
+                              ? 'bg-purple-100 text-purple-600' 
+                              : 'hover:bg-gray-100 text-gray-600'
+                          }`}
+                          title={col.isLLM ? 'Mark as deterministic' : 'Mark as LLM-generated'}
+                        >
+                          <Brain size={14} />
+                        </button>
+                        <button
+                          onClick={() => onRemoveColumn(col.id)}
+                          className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 text-red-600 rounded"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                   </th>
                 ))}

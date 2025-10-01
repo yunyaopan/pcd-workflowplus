@@ -25,6 +25,7 @@ import {
   removeOutputRow,
   updateOutputCell,
   updateOutputColumnName,
+  toggleOutputColumnLLM,
   updateOutputTableColumnType,
 } from '@/lib/utils/table-management';
 import { Header } from '@/components/logic-generator/header';
@@ -66,6 +67,8 @@ function LogicGeneratorContent() {
     setNewColumnOptions,
     newColumnLogic,
     setNewColumnLogic,
+    newColumnIsLLM,
+    setNewColumnIsLLM,
     columnMenuPosition,
     setColumnMenuPosition,
     editingColumnType,
@@ -150,12 +153,13 @@ function LogicGeneratorContent() {
   };
 
   const handleAddOutputColumn = () => {
-    const newOutputTable = addOutputColumn(outputTable, newColumnType, newColumnOptions, newColumnLogic);
+    const newOutputTable = addOutputColumn(outputTable, newColumnType, newColumnOptions, newColumnLogic, newColumnIsLLM);
     setOutputTable(newOutputTable);
     setEditingColumnId(Date.now()); // Set the new column as editing
     setNewColumnType('text');
     setNewColumnOptions('');
     setNewColumnLogic('');
+    setNewColumnIsLLM(false);
   };
 
   const handleRemoveOutputColumn = (colId: number) => {
@@ -179,6 +183,10 @@ function LogicGeneratorContent() {
 
   const handleUpdateOutputColumnName = (colId: number, name: string) => {
     setOutputTable(updateOutputColumnName(outputTable, colId, name));
+  };
+
+  const handleToggleOutputColumnLLM = (colId: number) => {
+    setOutputTable(toggleOutputColumnLLM(outputTable, colId));
   };
 
   const handleUpdateOutputTableName = (name: string) => {
@@ -255,6 +263,7 @@ function LogicGeneratorContent() {
     setNewColumnType('text');
     setNewColumnOptions('');
     setNewColumnLogic('');
+    setNewColumnIsLLM(false);
   };
 
   const handleSaveModalCancel = () => {
@@ -319,6 +328,8 @@ function LogicGeneratorContent() {
                     setNewColumnOptions={setNewColumnOptions}
                     newColumnLogic={newColumnLogic}
                     setNewColumnLogic={setNewColumnLogic}
+                    newColumnIsLLM={newColumnIsLLM}
+                    setNewColumnIsLLM={setNewColumnIsLLM}
                     onAddColumnWithType={() => {
                       if (typeof addingColumnTo === 'number') {
                         handleAddInputTableColumn(addingColumnTo);
@@ -360,6 +371,7 @@ function LogicGeneratorContent() {
               onAddOutputColumn={(event) => handleAddColumnClick('output', event!)}
               onRemoveOutputColumn={handleRemoveOutputColumn}
               onUpdateOutputColumnName={handleUpdateOutputColumnName}
+              onToggleOutputColumnLLM={handleToggleOutputColumnLLM}
               onAddOutputRow={handleAddOutputRow}
               onRemoveOutputRow={handleRemoveOutputRow}
               onUpdateOutputCell={handleUpdateOutputCell}
@@ -371,6 +383,8 @@ function LogicGeneratorContent() {
               setNewColumnOptions={setNewColumnOptions}
               newColumnLogic={newColumnLogic}
               setNewColumnLogic={setNewColumnLogic}
+              newColumnIsLLM={newColumnIsLLM}
+              setNewColumnIsLLM={setNewColumnIsLLM}
               onAddColumnWithType={() => {
                 if (addingColumnTo === 'output') {
                   handleAddOutputColumn();

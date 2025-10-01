@@ -2,18 +2,26 @@ import { openRouterClient } from '@/lib/api/openrouter';
 import type { InputTable, InputParam, OutputTable, TestResults } from '@/lib/types/logic-generator';
 
 export function buildPrompt(inputTables: InputTable[], inputParams: InputParam[], outputTable: OutputTable): string {
+  const hasLLMColumns = outputTable.columns.some(col => col.isLLM);
+  
   let prompt = `Generate a JavaScript function that transforms input data into output data based on the following specifications.
 
 CRITICAL REQUIREMENTS:
 - Generate ONLY pure JavaScript function code (ES6+), NO TypeScript
 - Do NOT use TypeScript types, interfaces, or type annotations
 - Do NOT wrap the code in markdown code blocks or backticks
-- The function should be deterministic and production-ready
+- The function should be production-ready
 - Include clear comments explaining the logic
 - Handle edge cases gracefully
 - The function name MUST be "transformData"
 - The function signature MUST be: function transformData({ inputTables, params }) { ... }
 - Return an array of objects representing the output table
+${hasLLMColumns ? `
+- For LLM columns, use the provided openRouterClient to generate values
+- The openRouterClient will be available as a global variable
+- Use async/await for LLM column generation
+- Handle LLM API errors gracefully` : `
+- The function should be deterministic`}
 
 `;
 
@@ -60,7 +68,7 @@ CRITICAL REQUIREMENTS:
   }
   prompt += `\nOutput Columns:\n`;
   outputTable.columns.forEach(col => {
-    prompt += `\n${col.name} (${col.type}):\n`;
+    prompt += `\n${col.name} (${col.type})${col.isLLM ? ' [LLM-GENERATED]' : ''}:\n`;
     if (col.logic) {
       prompt += `  Logic: ${col.logic}\n`;
     }
@@ -82,12 +90,33 @@ CRITICAL REQUIREMENTS:
 - Returns an array of objects representing the output table
 - Uses NO TypeScript syntax - pure JavaScript only
 - Match the expected output data as closely as possible
+${hasLLMColumns ? `
+- For LLM columns, use: await openRouterClient.generateCode(prompt, 'deepseek/deepseek-chat-v3.1:free')
+- The openRouterClient is available globally
+- Handle LLM errors gracefully with try-catch blocks` : ''}
 
 EXAMPLE STRUCTURE:
 function transformData({ inputTables, params }) {
-  // Your logic here
   const output = [];
-  // Process the data
+  
+  // Process each row
+  for (const row of inputTables['TableName'] || []) {
+    const outputRow = {};
+    
+    // Deterministic columns
+    outputRow.deterministicColumn = /* your logic */;
+    
+    ${hasLLMColumns ? `// LLM columns
+    try {
+      const llmPrompt = \`Your prompt here using row data: \${row.someField}\`;
+      outputRow.llmColumn = await openRouterClient.generateCode(llmPrompt, 'deepseek/deepseek-chat-v3.1:free');
+    } catch (error) {
+      outputRow.llmColumn = 'Error generating content';
+    }` : ''}
+    
+    output.push(outputRow);
+  }
+  
   return output;
 }`;
 
@@ -157,8 +186,10 @@ export async function testGeneratedCode(
         ${generatedCode}
         return transformData({ inputTables: inputData, params });
       `;
-      const testFunction = new AsyncFunction('inputData', 'params', wrappedCode);
-      const actualOutput = await testFunction(inputData, params);
+      const testFunction = new AsyncFunction('inputData', 'params', 'openRouterClient', wrappedCode);
+      
+      // Make openRouterClient available globally for LLM columns
+      const actualOutput = await testFunction(inputData, params, openRouterClient);
 
       // Compare with expected output
       const expectedOutput = outputTable.rows.map(row => {
@@ -175,8 +206,43 @@ export async function testGeneratedCode(
         return obj;
       });
 
-      // Deep comparison
-      const matches = JSON.stringify(actualOutput) === JSON.stringify(expectedOutput);
+      // Compare outputs, handling LLM columns differently
+      const llmColumns = outputTable.columns.filter(col => col.isLLM).map(col => col.name);
+      let matches = true;
+      let comparisonDetails = '';
+      
+      if (actualOutput.length !== expectedOutput.length) {
+        matches = false;
+        comparisonDetails = `Row count mismatch: expected ${expectedOutput.length}, got ${actualOutput.length}`;
+      } else {
+        for (let i = 0; i < actualOutput.length; i++) {
+          const actualRow = actualOutput[i];
+          const expectedRow = expectedOutput[i];
+          
+          for (const col of outputTable.columns) {
+            const colName = col.name;
+            const actualValue = actualRow[colName];
+            const expectedValue = expectedRow[colName];
+            
+            if (col.isLLM) {
+              // For LLM columns, just check that they're not empty/undefined
+              if (!actualValue || actualValue === '' || actualValue === 'Error generating content') {
+                matches = false;
+                comparisonDetails = `LLM column '${colName}' in row ${i + 1} is empty or errored`;
+                break;
+              }
+            } else {
+              // For deterministic columns, do exact comparison
+              if (actualValue !== expectedValue) {
+                matches = false;
+                comparisonDetails = `Column '${colName}' in row ${i + 1}: expected '${expectedValue}', got '${actualValue}'`;
+                break;
+              }
+            }
+          }
+          if (!matches) break;
+        }
+      }
       
       return {
         success: matches,
@@ -184,7 +250,7 @@ export async function testGeneratedCode(
         actual: actualOutput,
         message: matches 
           ? 'Test passed! Generated code produces expected output.' 
-          : 'Test failed. Generated output does not match expected output.'
+          : `Test failed. ${comparisonDetails}`
       };
 
     } catch (execError) {

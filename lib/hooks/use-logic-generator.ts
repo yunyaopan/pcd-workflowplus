@@ -45,6 +45,7 @@ export function useLogicGenerator() {
   const [newColumnType, setNewColumnType] = useState<DataType>('text');
   const [newColumnOptions, setNewColumnOptions] = useState('');
   const [newColumnLogic, setNewColumnLogic] = useState('');
+  const [newColumnIsLLM, setNewColumnIsLLM] = useState(false);
   const [columnMenuPosition, setColumnMenuPosition] = useState<ColumnMenuPosition>({ x: 0, y: 0 });
   
   // Column type editing state
@@ -207,6 +208,8 @@ export function useLogicGenerator() {
     setNewColumnOptions,
     newColumnLogic,
     setNewColumnLogic,
+    newColumnIsLLM,
+    setNewColumnIsLLM,
     columnMenuPosition,
     setColumnMenuPosition,
     editingColumnType,

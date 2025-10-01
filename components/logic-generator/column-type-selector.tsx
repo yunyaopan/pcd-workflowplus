@@ -13,6 +13,8 @@ interface ColumnTypeSelectorProps {
   setNewColumnOptions: (options: string) => void;
   newColumnLogic: string;
   setNewColumnLogic: (logic: string) => void;
+  newColumnIsLLM: boolean;
+  setNewColumnIsLLM: (isLLM: boolean) => void;
 }
 
 export function ColumnTypeSelector({
@@ -26,6 +28,8 @@ export function ColumnTypeSelector({
   setNewColumnOptions,
   newColumnLogic,
   setNewColumnLogic,
+  newColumnIsLLM,
+  setNewColumnIsLLM,
 }: ColumnTypeSelectorProps) {
   // Calculate if menu would go off-screen and adjust
   const menuWidth = 320;
@@ -127,18 +131,37 @@ export function ColumnTypeSelector({
         )}
 
         {isOutput && (
-          <div className="mb-3">
-            <div className="text-sm font-medium text-gray-700 mb-2">
-              How to generate this column&apos;s value?
+          <>
+            <div className="mb-3">
+              <div className="flex items-center gap-2 mb-2">
+                <input
+                  type="checkbox"
+                  id="llm-toggle"
+                  checked={newColumnIsLLM}
+                  onChange={(e) => setNewColumnIsLLM(e.target.checked)}
+                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                />
+                <label htmlFor="llm-toggle" className="text-sm font-medium text-gray-700">
+                  Generate using LLM
+                </label>
+              </div>
             </div>
-            <textarea
-              placeholder="Describe in natural language how to calculate or derive this column&apos;s value. For example: &apos;Multiply the Value column by the multiplier parameter&apos; or &apos;true if Item exists in the BQ table&apos;"
-              value={newColumnLogic}
-              onChange={(e) => setNewColumnLogic(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              rows={4}
-            />
-          </div>
+            <div className="mb-3">
+              <div className="text-sm font-medium text-gray-700 mb-2">
+                How to generate this column&apos;s value?
+              </div>
+              <textarea
+                placeholder={newColumnIsLLM 
+                  ? "Describe what you want the LLM to generate for this column. For example: 'Generate a creative product description based on the product name and category'"
+                  : "Describe in natural language how to calculate or derive this column's value. For example: 'Multiply the Value column by the multiplier parameter' or 'true if Item exists in the BQ table'"
+                }
+                value={newColumnLogic}
+                onChange={(e) => setNewColumnLogic(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                rows={4}
+              />
+            </div>
+          </>
         )}
 
         <button
