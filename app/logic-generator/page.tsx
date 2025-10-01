@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Plus, Trash2, Code, Download, Copy, Check, Play, AlertCircle, Save, FolderOpen } from 'lucide-react';
 import { openRouterClient } from '@/lib/api/openrouter';
 import { transformationsAPI } from '@/lib/api/transformations';
@@ -46,7 +46,7 @@ interface TestResults {
   message: string;
 }
 
-export default function LogicGenerator() {
+function LogicGeneratorContent() {
   const searchParams = useSearchParams();
   const [inputTables, setInputTables] = useState<InputTable[]>([]);
   const [inputParams, setInputParams] = useState<InputParam[]>([]);
@@ -484,15 +484,15 @@ export default function LogicGenerator() {
   const renderCell = (row: Record<string, unknown>, col: Column, tableId: number | null, isOutput: boolean) => {
     const value = row[col.id];
     const updateFn = isOutput 
-      ? (val: unknown) => updateOutputCell(row.id, col.id, val)
-      : (val: unknown) => updateTableCell(tableId!, row.id, col.id, val);
+      ? (val: unknown) => updateOutputCell(row.id as number, col.id, val)
+      : (val: unknown) => updateTableCell(tableId!, row.id as number, col.id, val);
     
     switch(col.type) {
       case 'text':
         return (
           <input
             type="text"
-            value={value || ''}
+            value={(value as string) || ''}
             onChange={(e) => updateFn(e.target.value)}
             className="w-full px-2 py-1 border-0 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
@@ -501,7 +501,7 @@ export default function LogicGenerator() {
         return (
           <input
             type="number"
-            value={value || ''}
+            value={(value as string) || ''}
             onChange={(e) => updateFn(e.target.value)}
             className="w-full px-2 py-1 border-0 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
@@ -510,7 +510,7 @@ export default function LogicGenerator() {
         return (
           <input
             type="date"
-            value={value || ''}
+            value={(value as string) || ''}
             onChange={(e) => updateFn(e.target.value)}
             className="w-full px-2 py-1 border-0 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
@@ -518,7 +518,7 @@ export default function LogicGenerator() {
       case 'select':
         return (
           <select
-            value={value || ''}
+            value={(value as string) || ''}
             onChange={(e) => updateFn(e.target.value)}
             className="w-full px-2 py-1 border-0 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
           >
@@ -532,7 +532,7 @@ export default function LogicGenerator() {
         return (
           <input
             type="checkbox"
-            checked={value || false}
+            checked={(value as boolean) || false}
             onChange={(e) => updateFn(e.target.checked)}
             className="ml-2"
           />
@@ -541,7 +541,7 @@ export default function LogicGenerator() {
         return (
           <input
             type="text"
-            value={value || ''}
+            value={(value as string) || ''}
             onChange={(e) => updateFn(e.target.value)}
             className="w-full px-2 py-1 border-0 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
@@ -705,7 +705,7 @@ function transformData({ inputTables, params }) {
             let value = row[col.id];
             // Convert to appropriate type
             if (col.type === 'number') {
-              value = value === '' ? 0 : parseFloat(value);
+              value = value === '' ? 0 : parseFloat(value as string);
             } else if (col.type === 'boolean') {
               value = value === true || value === 'true';
             }
@@ -720,7 +720,7 @@ function transformData({ inputTables, params }) {
       inputParams.forEach(param => {
         let value: unknown = param.value;
         if (param.type === 'number') {
-          value = value === '' ? 0 : parseFloat(value);
+          value = value === '' ? 0 : parseFloat(value as string);
         } else if (param.type === 'boolean') {
           value = value === 'true' || value === true;
         }
@@ -743,7 +743,7 @@ function transformData({ inputTables, params }) {
           outputTable.columns.forEach(col => {
             let value = row[col.id];
             if (col.type === 'number') {
-              value = value === '' ? 0 : parseFloat(value);
+              value = value === '' ? 0 : parseFloat(value as string);
             } else if (col.type === 'boolean') {
               value = value === true || value === 'true';
             }
@@ -774,7 +774,7 @@ function transformData({ inputTables, params }) {
             outputTable.columns.forEach(col => {
               let value = row[col.id];
               if (col.type === 'number') {
-                value = value === '' ? 0 : parseFloat(value);
+                value = value === '' ? 0 : parseFloat(value as string);
               } else if (col.type === 'boolean') {
                 value = value === true || value === 'true';
               }
@@ -1010,7 +1010,7 @@ function transformData({ inputTables, params }) {
                         </thead>
                         <tbody>
                           {table.rows.map((row, idx) => (
-                            <tr key={row.id} className="hover:bg-gray-50">
+                            <tr key={row.id as React.Key} className="hover:bg-gray-50">
                               <td className="px-2 py-1 border-b border-r border-gray-200 text-center text-sm text-gray-500">
                                 {idx + 1}
                               </td>
@@ -1021,7 +1021,7 @@ function transformData({ inputTables, params }) {
                               ))}
                               <td className="border-b border-gray-200 text-center">
                                 <button
-                                  onClick={() => removeTableRow(table.id, row.id)}
+                                  onClick={() => removeTableRow(table.id, row.id as number)}
                                   className="p-1 hover:bg-red-100 text-red-600 rounded"
                                 >
                                   <Trash2 size={14} />
@@ -1206,7 +1206,7 @@ function transformData({ inputTables, params }) {
                     </thead>
                     <tbody>
                       {outputTable.rows.map((row, idx) => (
-                        <tr key={row.id} className="hover:bg-gray-50">
+                        <tr key={row.id as React.Key} className="hover:bg-gray-50">
                           <td className="px-2 py-1 border-b border-r border-gray-200 text-center text-sm text-gray-500">
                             {idx + 1}
                           </td>
@@ -1217,7 +1217,7 @@ function transformData({ inputTables, params }) {
                           ))}
                           <td className="border-b border-gray-200 text-center">
                             <button
-                              onClick={() => removeOutputRow(row.id)}
+                              onClick={() => removeOutputRow(row.id as number)}
                               className="p-1 hover:bg-red-100 text-red-600 rounded"
                             >
                               <Trash2 size={14} />
@@ -1480,5 +1480,13 @@ function transformData({ inputTables, params }) {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LogicGenerator() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <LogicGeneratorContent />
+    </Suspense>
   );
 }

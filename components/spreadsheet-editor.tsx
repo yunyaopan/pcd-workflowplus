@@ -149,16 +149,6 @@ function RelationCell({ column, relations, onUpdate, availableSpreadsheets }: Re
   const relationOptions = column.options as RelationOptions;
   const targetSpreadsheet = availableSpreadsheets.find(s => s.id === relationOptions?.target_spreadsheet_id);
 
-  useEffect(() => {
-    if (isOpen && relationOptions?.target_spreadsheet_id) {
-      fetchAvailableRows();
-    }
-  }, [isOpen, relationOptions?.target_spreadsheet_id, fetchAvailableRows]);
-
-  useEffect(() => {
-    setSelectedRows(relations.map(r => r.related_row_id));
-  }, [relations]);
-
   const fetchAvailableRows = useCallback(async () => {
     try {
       const response = await fetch(`/api/spreadsheets/${relationOptions.target_spreadsheet_id}/available-rows`);
@@ -170,6 +160,16 @@ function RelationCell({ column, relations, onUpdate, availableSpreadsheets }: Re
       console.error('Error fetching available rows:', error);
     }
   }, [relationOptions.target_spreadsheet_id]);
+
+  useEffect(() => {
+    if (isOpen && relationOptions?.target_spreadsheet_id) {
+      fetchAvailableRows();
+    }
+  }, [isOpen, relationOptions?.target_spreadsheet_id, fetchAvailableRows]);
+
+  useEffect(() => {
+    setSelectedRows(relations.map(r => r.related_row_id));
+  }, [relations]);
 
   const handleSave = () => {
     onUpdate(selectedRows);
