@@ -4,14 +4,12 @@ import {
   UpdateTransformationRequest 
 } from '@/lib/database/types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
 export class TransformationsAPI {
   private async request<T>(
     endpoint: string, 
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${API_BASE_URL}/api${endpoint}`;
+    const url = `/api${endpoint}`;
     const response = await fetch(url, {
       ...options,
       headers: {

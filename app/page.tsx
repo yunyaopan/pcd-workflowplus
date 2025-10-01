@@ -22,6 +22,9 @@ export default function Home() {
               <Link href={"/contracts"} className="text-blue-600 hover:text-blue-700">
                 Contracts
               </Link>
+              <Link href={"/transformations"} className="text-blue-600 hover:text-blue-700">
+                Transformations
+              </Link>
               <div className="flex items-center gap-2">
                 <DeployButton />
               </div>
