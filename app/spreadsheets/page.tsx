@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SpreadsheetList } from "@/components/spreadsheet-list";
+import { UniversalHeader } from "@/components/universal-header";
 
 export default async function SpreadsheetsPage() {
   const supabase = await createClient();
@@ -11,13 +12,17 @@ export default async function SpreadsheetsPage() {
   }
 
   return (
-    <div className="flex-1 w-full flex flex-col gap-8">
-      <div className="w-full">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">My Spreadsheets</h1>
+    <>
+      <UniversalHeader 
+        title="My Spreadsheets" 
+        subtitle="Create and manage your intelligent spreadsheets"
+        showNavigation={false}
+      />
+      <div className="flex-1 w-full flex flex-col gap-8">
+        <div className="w-full">
+          <SpreadsheetList />
         </div>
-        <SpreadsheetList />
       </div>
-    </div>
+    </>
   );
 }
