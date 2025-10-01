@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit3 } from 'lucide-react';
 import { CellRenderer } from './cell-renderer';
 import { ColumnTypeSelector } from './column-type-selector';
@@ -118,7 +119,28 @@ export function UnifiedTableComponent({
   const table = isOutput ? outputTable : inputTable;
   if (!table) return null;
 
-  const handleColumnTypeEdit = (col: Column) => {
+  // Use useEffect to ensure we have the correct viewport dimensions for positioning
+  const [viewportDimensions, setViewportDimensions] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1024,
+    height: typeof window !== 'undefined' ? window.innerHeight : 768
+  });
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      setViewportDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', updateDimensions);
+    updateDimensions(); // Set initial dimensions
+
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+
+  const handleColumnTypeEdit = (col: Column, event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
     setEditingColumnData({
       id: col.id,
       type: col.type,
@@ -126,6 +148,14 @@ export function UnifiedTableComponent({
       options: col.options,
     });
     setEditingColumnType(true);
+    // Store the position for the modal
+    setEditingColumnData(prev => ({
+      ...prev,
+      modalPosition: {
+        x: rect.left,
+        y: rect.bottom + 4
+      }
+    }));
   };
 
   const handleColumnTypeUpdate = () => {
@@ -218,7 +248,7 @@ export function UnifiedTableComponent({
               <tr className={`${isOutput ? 'bg-purple-100' : 'bg-gray-100'}`}>
                 <th className="w-12 px-2 py-2 text-center border-b border-r border-gray-200">#</th>
                 {table.columns.map(col => (
-                  <th key={col.id} className="px-2 py-2 text-left border-b border-r border-gray-200 min-w-32">
+                  <th key={col.id} className="px-2 py-2 text-left border-b border-r border-gray-200 min-w-32 relative">
                     <div className="flex items-center justify-between group">
                       <div className="flex-1">
                         {editingColumnId === col.id ? (
@@ -269,7 +299,7 @@ export function UnifiedTableComponent({
                       </div>
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => handleColumnTypeEdit(col)}
+                          onClick={(e) => handleColumnTypeEdit(col, e)}
                           className="p-1 opacity-0 group-hover:opacity-100 hover:bg-blue-100 text-blue-600 rounded"
                           title="Edit column type"
                         >
@@ -404,80 +434,100 @@ export function UnifiedTableComponent({
 
       {/* Column Type Edit Modal */}
       {editingColumnType && editingColumnData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-h-96 overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">Edit Column Type</h3>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Property type</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(['text', 'number', 'boolean', 'date', 'select'] as DataType[]).map(type => (
-                  <button
-                    key={type}
-                    onClick={() => setEditingColumnData({...editingColumnData, type})}
-                    className={`px-3 py-2 text-sm rounded-md text-left flex items-center gap-2 ${
-                      editingColumnData.type === type 
-                        ? 'bg-blue-100 border-2 border-blue-500' 
-                        : 'bg-gray-50 border border-gray-300 hover:bg-gray-100'
-                    }`}
-                  >
-                    <span className="text-gray-600">{getColumnTypeIcon(type)}</span>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {editingColumnData.type === 'select' && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Options</label>
-                <input
-                  type="text"
-                  placeholder="Option1, Option2, Option3"
-                  value={editingColumnData.options?.join(', ') || ''}
-                  onChange={(e) => setEditingColumnData({
-                    ...editingColumnData,
-                    options: e.target.value.split(',').map(s => s.trim()).filter(s => s)
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            )}
-
-            {isOutput && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  How to generate this column&apos;s value?
-                </label>
-                <textarea
-                  placeholder="Describe in natural language how to calculate or derive this column&apos;s value"
-                  value={editingColumnData.logic || ''}
-                  onChange={(e) => setEditingColumnData({...editingColumnData, logic: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  rows={3}
-                />
-              </div>
-            )}
-
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => {
-                  setEditingColumnType(false);
-                  setEditingColumnData(null);
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleColumnTypeUpdate}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-              >
-                Update
-              </button>
+        <>
+          {/* Invisible overlay to detect clicks outside */}
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => {
+              setEditingColumnType(false);
+              setEditingColumnData(null);
+            }}
+          />
+          
+          <div className="fixed bg-white border border-gray-300 rounded-lg shadow-xl z-50 p-4 w-80"
+               style={{
+                 left: `${(() => {
+                   const menuWidth = 320;
+                   let adjustedX = editingColumnData.modalPosition?.x || 0;
+                   if (adjustedX + menuWidth > viewportDimensions.width - 20) {
+                     adjustedX = viewportDimensions.width - menuWidth - 20;
+                   }
+                   return adjustedX;
+                 })()}px`,
+                 top: `${(() => {
+                   const menuHeight = isOutput ? 380 : 280;
+                   let adjustedY = editingColumnData.modalPosition?.y || 0;
+                   if (adjustedY + menuHeight > viewportDimensions.height - 20) {
+                     adjustedY = (editingColumnData.modalPosition?.y || 0) - menuHeight - 8;
+                     if (adjustedY < 20) {
+                       adjustedY = 20;
+                     }
+                   }
+                   return adjustedY;
+                 })()}px`
+               }}
+               onClick={(e) => e.stopPropagation()}>
+          <div className="mb-3">
+            <div className="text-sm font-medium text-gray-700 mb-2">Property type</div>
+            <div className="grid grid-cols-2 gap-2">
+              {(['text', 'number', 'boolean', 'date', 'select'] as DataType[]).map(type => (
+                <button
+                  key={type}
+                  onClick={() => setEditingColumnData({...editingColumnData, type})}
+                  className={`px-3 py-2 text-sm rounded-md text-left flex items-center gap-2 ${
+                    editingColumnData.type === type 
+                      ? 'bg-blue-100 border-2 border-blue-500' 
+                      : 'bg-gray-50 border border-gray-300 hover:bg-gray-100'
+                  }`}
+                >
+                  <span className="text-gray-600">{getColumnTypeIcon(type)}</span>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </button>
+              ))}
             </div>
           </div>
-        </div>
+
+          {editingColumnData.type === 'select' && (
+            <div className="mb-3">
+              <div className="text-sm font-medium text-gray-700 mb-2">Options</div>
+              <input
+                type="text"
+                placeholder="Option1, Option2, Option3"
+                value={editingColumnData.options?.join(', ') || ''}
+                onChange={(e) => setEditingColumnData({
+                  ...editingColumnData,
+                  options: e.target.value.split(',').map(s => s.trim()).filter(s => s)
+                })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+
+          {isOutput && (
+            <div className="mb-3">
+              <div className="text-sm font-medium text-gray-700 mb-2">
+                How to generate this column&apos;s value?
+              </div>
+              <textarea
+                placeholder="Describe in natural language how to calculate or derive this column&apos;s value"
+                value={editingColumnData.logic || ''}
+                onChange={(e) => setEditingColumnData({...editingColumnData, logic: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                rows={3}
+              />
+            </div>
+          )}
+
+          <button
+            onClick={() => {
+              handleColumnTypeUpdate();
+            }}
+            className="w-full bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 text-sm font-medium"
+          >
+            Update Property
+          </button>
+          </div>
+        </>
       )}
     </div>
   );

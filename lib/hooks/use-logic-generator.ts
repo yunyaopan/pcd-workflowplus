@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { openRouterClient } from '@/lib/api/openrouter';
 import { transformationsAPI } from '@/lib/api/transformations';
 import type { 
@@ -55,6 +56,7 @@ export function useLogicGenerator() {
     type: DataType;
     logic?: string;
     options?: string[];
+    modalPosition?: { x: number; y: number };
   } | null>(null);
   
   // Save/Load state
@@ -141,7 +143,7 @@ export function useLogicGenerator() {
         setCurrentTransformationId(response.transformation.id);
       }
       
-      alert('Transformation saved successfully!');
+      toast.success('Transformation saved successfully!');
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Failed to save transformation');
     } finally {
