@@ -1,0 +1,60 @@
+export const DATA_TYPES = ['text', 'number', 'boolean', 'date', 'select'] as const;
+
+export type DataType = typeof DATA_TYPES[number];
+
+export interface Column {
+  id: number;
+  name: string;
+  type: DataType;
+  logic?: string;
+  options?: string[];
+}
+
+export interface InputTable {
+  id: number;
+  name: string;
+  columns: Column[];
+  rows: Record<string, unknown>[];
+}
+
+export interface InputParam {
+  id: number;
+  name: string;
+  type: DataType;
+  value: string;
+  description: string;
+}
+
+export interface OutputTable {
+  name: string;
+  baseLogic: string;
+  columns: Column[];
+  rows: Record<string, unknown>[];
+}
+
+export interface TestResults {
+  success: boolean;
+  actual?: Record<string, unknown>[];
+  expected?: Record<string, unknown>[];
+  error?: string;
+  message: string;
+}
+
+export interface ConnectionTest {
+  success: boolean;
+  message: string;
+  model?: string;
+}
+
+export interface ColumnMenuPosition {
+  x: number;
+  y: number;
+}
+
+export interface SaveTransformationData {
+  name: string;
+  description?: string;
+  input_tables: InputTable[];
+  input_params: InputParam[];
+  output_table: OutputTable;
+}
