@@ -1,6 +1,6 @@
 import { Plus, Trash2, Brain } from 'lucide-react';
 import { CellRenderer } from './cell-renderer';
-import type { OutputTable, Column } from '@/lib/types/logic-generator';
+import type { OutputTable } from '@/lib/types/logic-generator';
 
 interface OutputTableProps {
   outputTable: OutputTable;
@@ -140,8 +140,6 @@ export function OutputTableComponent({
                       <CellRenderer
                         row={row}
                         col={col}
-                        tableId={null}
-                        isOutput={true}
                         onUpdate={(value) => onUpdateCell(row.id as number, col.id, value)}
                       />
                     </td>

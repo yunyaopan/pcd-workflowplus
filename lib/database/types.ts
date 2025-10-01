@@ -126,7 +126,7 @@ export interface InputTable {
 export interface InputParam {
   id: number;
   name: string;
-  type: string;
+  type: DataType;
   value: string;
   description: string;
 }
@@ -138,10 +138,12 @@ export interface OutputTable {
   rows: Record<string, unknown>[];
 }
 
+export type DataType = 'text' | 'number' | 'boolean' | 'date' | 'select';
+
 export interface Column {
   id: number;
   name: string;
-  type: string;
+  type: DataType;
   logic?: string;
   options?: string[];
 }

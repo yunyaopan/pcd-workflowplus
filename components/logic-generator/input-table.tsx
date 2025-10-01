@@ -1,6 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { CellRenderer } from './cell-renderer';
-import type { InputTable, Column } from '@/lib/types/logic-generator';
+import type { InputTable } from '@/lib/types/logic-generator';
 
 interface InputTableProps {
   table: InputTable;
@@ -112,8 +112,6 @@ export function InputTableComponent({
                     <CellRenderer
                       row={row}
                       col={col}
-                      tableId={table.id}
-                      isOutput={false}
                       onUpdate={(value) => onUpdateCell(table.id, row.id as number, col.id, value)}
                     />
                   </td>

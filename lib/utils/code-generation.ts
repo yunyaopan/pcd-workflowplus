@@ -207,7 +207,6 @@ export async function testGeneratedCode(
       });
 
       // Compare outputs, handling LLM columns differently
-      const llmColumns = outputTable.columns.filter(col => col.isLLM).map(col => col.name);
       let matches = true;
       let comparisonDetails = '';
       

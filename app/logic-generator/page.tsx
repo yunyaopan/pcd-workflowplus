@@ -80,7 +80,6 @@ function LogicGeneratorContent() {
     saveError,
     setSaveError,
     loadError,
-    setLoadError,
     showSaveModal,
     setShowSaveModal,
     saveName,
@@ -91,7 +90,6 @@ function LogicGeneratorContent() {
     // Actions
     testOpenRouterConnection,
     saveTransformation,
-    loadTransformation,
     copyCode,
     downloadCode,
   } = useLogicGenerator();
@@ -240,14 +238,6 @@ function LogicGeneratorContent() {
     }
   };
 
-  const handleColumnMenuClick = (e: React.MouseEvent, tableId: number | 'output') => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setColumnMenuPosition({
-      x: rect.left,
-      y: rect.bottom + 4
-    });
-    setAddingColumnTo(tableId);
-  };
 
   const handleAddColumnClick = (tableId: number | 'output', event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect();

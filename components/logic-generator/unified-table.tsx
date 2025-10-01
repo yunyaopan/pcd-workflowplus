@@ -55,7 +55,12 @@ interface UnifiedTableProps {
     logic?: string;
     options?: string[];
   } | null;
-  setEditingColumnData: (data: any) => void;
+  setEditingColumnData: (data: {
+    id: number;
+    type: DataType;
+    logic?: string;
+    options?: string[];
+  } | null) => void;
   onUpdateInputColumnType?: (tableId: number, colId: number, type: DataType, options?: string[]) => void;
   onUpdateOutputColumnType?: (colId: number, type: DataType, logic?: string, options?: string[]) => void;
 }
@@ -330,8 +335,6 @@ export function UnifiedTableComponent({
                       <CellRenderer
                         row={row}
                         col={col}
-                        tableId={isOutput ? null : inputTable?.id}
-                        isOutput={isOutput}
                         onUpdate={(value) => {
                           if (isOutput) {
                             onUpdateOutputCell?.(row.id as number, col.id, value);

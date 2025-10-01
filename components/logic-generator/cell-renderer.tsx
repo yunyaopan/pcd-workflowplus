@@ -3,12 +3,10 @@ import type { Column } from '@/lib/types/logic-generator';
 interface CellRendererProps {
   row: Record<string, unknown>;
   col: Column;
-  tableId: number | null;
-  isOutput: boolean;
   onUpdate: (value: unknown) => void;
 }
 
-export function CellRenderer({ row, col, tableId, isOutput, onUpdate }: CellRendererProps) {
+export function CellRenderer({ row, col, onUpdate }: CellRendererProps) {
   const value = row[col.id];
   
   switch(col.type) {
