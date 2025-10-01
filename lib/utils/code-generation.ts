@@ -14,7 +14,7 @@ CRITICAL REQUIREMENTS:
 - Include clear comments explaining the logic
 - Handle edge cases gracefully
 - The function name MUST be "transformData"
-- The function signature MUST be: function transformData({ inputTables, params }) { ... }
+- The function signature MUST be: ${hasLLMColumns ? 'async function transformData({ inputTables, params }) { ... }' : 'function transformData({ inputTables, params }) { ... }'}
 - Return an array of objects representing the output table
 ${hasLLMColumns ? `
 - For LLM columns, use the provided openRouterClient to generate values
@@ -96,7 +96,7 @@ ${hasLLMColumns ? `
 - Handle LLM errors gracefully with try-catch blocks` : ''}
 
 EXAMPLE STRUCTURE:
-function transformData({ inputTables, params }) {
+${hasLLMColumns ? 'async ' : ''}function transformData({ inputTables, params }) {
   const output = [];
   
   // Process each row
@@ -184,7 +184,7 @@ export async function testGeneratedCode(
       const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
       const wrappedCode = `
         ${generatedCode}
-        return transformData({ inputTables: inputData, params });
+        return await transformData({ inputTables: inputData, params });
       `;
       const testFunction = new AsyncFunction('inputData', 'params', 'openRouterClient', wrappedCode);
       

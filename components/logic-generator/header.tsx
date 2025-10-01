@@ -1,4 +1,6 @@
-import { Play, Save, FolderOpen, AlertCircle, Edit2, Check, X } from 'lucide-react';
+import { Play, Save, FolderOpen, AlertCircle, Edit2, Check, X, Star } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface HeaderProps {
   apiKeyStatus: 'checking' | 'valid' | 'missing';
@@ -46,20 +48,17 @@ export function Header({
   };
 
   return (
-    <div className="text-center mb-8">
-      <h1 className="text-4xl font-bold text-gray-900 mb-2">Natural Language Logic Generator</h1>
-      <p className="text-gray-600">Define your inputs and outputs, describe the logic in plain English, and generate Next.js code</p>
-      
-      {/* Transformation Name Editor */}
-      <div className="mt-6 flex justify-center">
-        <div className="flex items-center gap-3 bg-white rounded-lg shadow-md px-6 py-3 border">
+    <div className="mb-8">
+      {/* Google Docs Style Header */}
+      <div className="flex items-center justify-between bg-white border-b border-gray-200 px-6 py-4">
+        {/* Left side - Title and Star */}
+        <div className="flex items-center gap-3">
           {isEditingName ? (
-            <>
-              <input
-                type="text"
+            <div className="flex items-center gap-2">
+              <Input
                 value={transformationName}
                 onChange={(e) => setTransformationName(e.target.value)}
-                className="text-lg font-semibold text-gray-900 bg-transparent border-none outline-none focus:ring-0"
+                className="text-lg font-semibold text-gray-900 border-none shadow-none focus-visible:ring-0 h-auto px-0"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -69,36 +68,87 @@ export function Header({
                   }
                 }}
               />
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleNameSave}
-                className="text-green-600 hover:text-green-700 transition"
+                className="h-6 w-6 text-green-600 hover:text-green-700"
               >
                 <Check size={16} />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleNameCancel}
-                className="text-red-600 hover:text-red-700 transition"
+                className="h-6 w-6 text-red-600 hover:text-red-700"
               >
                 <X size={16} />
-              </button>
-            </>
+              </Button>
+            </div>
           ) : (
-            <>
-              <span className="text-lg font-semibold text-gray-900">{transformationName}</span>
-              <button
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-semibold text-gray-900">{transformationName}</h1>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleNameEdit}
-                className="text-gray-500 hover:text-gray-700 transition"
+                className="h-6 w-6 text-gray-500 hover:text-gray-700"
               >
                 <Edit2 size={16} />
-              </button>
-            </>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-gray-400 hover:text-gray-600"
+              >
+                <Star size={16} />
+              </Button>
+            </div>
           )}
+        </div>
+
+        {/* Right side - Action buttons */}
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={onSaveTransformation}
+            disabled={isSaving || isLoading}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Save size={16} />
+            {isSaving ? 'Saving...' : 'Save'}
+          </Button>
+          <Button
+            variant="outline"
+            asChild
+          >
+            <a href="/transformations">
+              <FolderOpen size={16} />
+              View Transformations
+            </a>
+          </Button>
+        </div>
+      </div>
+
+      {/* Subtitle */}
+      <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
+        <p className="text-sm text-gray-600 mb-3">Define your inputs and outputs, describe the logic in plain English, and generate the code which would transform the data in your desired way. <br /> <br /> You can include LLM prompts to generate the data for your output table.</p>
+        
+        {/* Simple Steps */}
+        <div className="text-xs text-gray-500">
+          <p className="font-medium mb-2">How to get started:</p>
+          <ol className="list-decimal list-inside space-y-1">
+            <li>Add your input data tables/ parameters</li>
+            <li>Define your output table structure, column types and describe your transformation logic in plain English</li>
+            <li>Add example data to your input data tables and output table</li>
+            <li>Click "Generate Code" to create the code</li>
+            <li>Test and validate if the output of the code match with the example data you provided</li>
+          </ol>
         </div>
       </div>
       
       {/* API Key Status */}
       {apiKeyStatus === 'missing' && (
-        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="mx-6 mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex items-center gap-2 text-yellow-800">
             <AlertCircle size={20} />
             <span className="font-semibold">OpenRouter API Key Required</span>
@@ -118,20 +168,21 @@ export function Header({
       )}
 
       {/* Connection Test */}
-      <div className="mt-4 flex justify-center">
-        <button
+      <div className="mx-6 mt-4 flex justify-center">
+        <Button
           onClick={onTestConnection}
           disabled={isTestingConnection}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="outline"
+          className="hidden"
         >
           <Play size={16} />
           {isTestingConnection ? 'Testing Connection...' : 'Test OpenRouter Connection'}
-        </button>
+        </Button>
       </div>
 
       {/* Connection Test Results */}
       {connectionTest && (
-        <div className={`mt-4 p-4 rounded-lg border ${
+        <div className={`mx-6 mt-4 p-4 rounded-lg border ${
           connectionTest.success 
             ? 'bg-green-50 border-green-200' 
             : 'bg-red-50 border-red-200'
@@ -152,28 +203,9 @@ export function Header({
         </div>
       )}
 
-      {/* Save/Load Actions */}
-      <div className="mt-6 flex justify-center gap-4">
-        <button
-          onClick={onSaveTransformation}
-          disabled={isSaving || isLoading}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Save size={16} />
-          {isSaving ? 'Saving...' : currentTransformationId ? 'Update Transformation' : 'Save Transformation'}
-        </button>
-        <a
-          href="/transformations"
-          className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-        >
-          <FolderOpen size={16} />
-          View Saved
-        </a>
-      </div>
-
       {/* Error Messages */}
       {saveError && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center gap-2 text-red-800">
             <AlertCircle size={20} />
             <span className="font-semibold">Save Error</span>
@@ -183,7 +215,7 @@ export function Header({
       )}
 
       {loadError && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center gap-2 text-red-800">
             <AlertCircle size={20} />
             <span className="font-semibold">Load Error</span>
@@ -193,7 +225,7 @@ export function Header({
       )}
 
       {isLoading && (
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mx-6 mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-center gap-2 text-blue-800">
             <AlertCircle size={20} />
             <span className="font-semibold">Loading Transformation...</span>
