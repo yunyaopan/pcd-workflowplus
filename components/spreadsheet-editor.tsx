@@ -10,7 +10,6 @@ import type {
   SpreadsheetColumn, 
   SpreadsheetRow, 
   SpreadsheetCell,
-  SpreadsheetRelation,
   SpreadsheetRelationWithData,
   RelationOptions
 } from '@/lib/database/types';
@@ -154,13 +153,13 @@ function RelationCell({ column, relations, onUpdate, availableSpreadsheets }: Re
     if (isOpen && relationOptions?.target_spreadsheet_id) {
       fetchAvailableRows();
     }
-  }, [isOpen, relationOptions?.target_spreadsheet_id]);
+  }, [isOpen, relationOptions?.target_spreadsheet_id, fetchAvailableRows]);
 
   useEffect(() => {
     setSelectedRows(relations.map(r => r.related_row_id));
   }, [relations]);
 
-  const fetchAvailableRows = async () => {
+  const fetchAvailableRows = useCallback(async () => {
     try {
       const response = await fetch(`/api/spreadsheets/${relationOptions.target_spreadsheet_id}/available-rows`);
       if (response.ok) {
@@ -170,7 +169,7 @@ function RelationCell({ column, relations, onUpdate, availableSpreadsheets }: Re
     } catch (error) {
       console.error('Error fetching available rows:', error);
     }
-  };
+  }, [relationOptions.target_spreadsheet_id]);
 
   const handleSave = () => {
     onUpdate(selectedRows);
@@ -273,7 +272,7 @@ export function SpreadsheetEditor({ spreadsheetId }: SpreadsheetEditorProps) {
       if (response.ok) {
         const spreadsheets = await response.json();
         // Filter out the current spreadsheet
-        const filtered = spreadsheets.filter((s: any) => s.id !== spreadsheetId);
+        const filtered = spreadsheets.filter((s: { id: string }) => s.id !== spreadsheetId);
         setAvailableSpreadsheets(filtered);
       }
     } catch (error) {

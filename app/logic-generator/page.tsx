@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Code, Download, Copy, Check, Play, AlertCircle, Save, FolderOpen } from 'lucide-react';
 import { openRouterClient } from '@/lib/api/openrouter';
 import { transformationsAPI } from '@/lib/api/transformations';
-import { Transformation } from '@/lib/database/types';
 import { useSearchParams } from 'next/navigation';
 
 const DATA_TYPES = ['text', 'number', 'boolean', 'date', 'select'];
@@ -21,7 +20,7 @@ interface InputTable {
   id: number;
   name: string;
   columns: Column[];
-  rows: Record<string, any>[];
+  rows: Record<string, unknown>[];
 }
 
 interface InputParam {
@@ -36,13 +35,13 @@ interface OutputTable {
   name: string;
   baseLogic: string;
   columns: Column[];
-  rows: Record<string, any>[];
+  rows: Record<string, unknown>[];
 }
 
 interface TestResults {
   success: boolean;
-  actual?: any[];
-  expected?: any[];
+  actual?: Record<string, unknown>[];
+  expected?: Record<string, unknown>[];
   error?: string;
   message: string;
 }
@@ -260,7 +259,7 @@ export default function LogicGenerator() {
           {isOutput && (
             <div className="mb-3">
               <div className="text-sm font-medium text-gray-700 mb-2">
-                How to generate this column's value?
+                How to generate this column&apos;s value?
               </div>
               <textarea
                 placeholder="Describe in natural language how to calculate or derive this column&apos;s value. For example: &apos;Multiply the Value column by the multiplier parameter&apos; or &apos;true if Item exists in the BQ table&apos;"
@@ -328,7 +327,8 @@ export default function LogicGenerator() {
     setInputTables(inputTables.map(t => {
       if (t.id === tableId) {
         const newRows = t.rows.map(row => {
-          const { [colId]: _, ...rest } = row;
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { [colId]: _unused, ...rest } = row;
           return rest;
         });
         return { ...t, columns: t.columns.filter(c => c.id !== colId), rows: newRows };
@@ -344,7 +344,7 @@ export default function LogicGenerator() {
   const addTableRow = (tableId: number) => {
     setInputTables(inputTables.map(t => {
       if (t.id === tableId) {
-        const newRow: Record<string, any> = { id: Date.now() };
+        const newRow: Record<string, unknown> = { id: Date.now() };
         t.columns.forEach(col => {
           newRow[col.id] = col.type === 'boolean' ? false : col.type === 'number' ? '0' : '';
         });
@@ -362,7 +362,7 @@ export default function LogicGenerator() {
     ));
   };
 
-  const updateTableCell = (tableId: number, rowId: number, colId: number, value: any) => {
+  const updateTableCell = (tableId: number, rowId: number, colId: number, value: unknown) => {
     setInputTables(inputTables.map(t => {
       if (t.id === tableId) {
         return {
@@ -423,7 +423,8 @@ export default function LogicGenerator() {
 
   const removeOutputColumn = (colId: number) => {
     const newRows = outputTable.rows.map(row => {
-      const { [colId]: _, ...rest } = row;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [colId]: _unused, ...rest } = row;
       return rest;
     });
     setOutputTable({
@@ -438,7 +439,7 @@ export default function LogicGenerator() {
 
 
   const addOutputRow = () => {
-    const newRow: Record<string, any> = { id: Date.now() };
+    const newRow: Record<string, unknown> = { id: Date.now() };
     outputTable.columns.forEach(col => {
       newRow[col.id] = col.type === 'boolean' ? false : col.type === 'number' ? '0' : '';
     });
@@ -455,7 +456,7 @@ export default function LogicGenerator() {
     });
   };
 
-  const updateOutputCell = (rowId: number, colId: number, value: any) => {
+  const updateOutputCell = (rowId: number, colId: number, value: unknown) => {
     setOutputTable({
       ...outputTable,
       rows: outputTable.rows.map(r => 
@@ -480,11 +481,11 @@ export default function LogicGenerator() {
   };
 
   // Render Cell based on type
-  const renderCell = (row: Record<string, any>, col: Column, tableId: number | null, isOutput: boolean) => {
+  const renderCell = (row: Record<string, unknown>, col: Column, tableId: number | null, isOutput: boolean) => {
     const value = row[col.id];
     const updateFn = isOutput 
-      ? (val: any) => updateOutputCell(row.id, col.id, val)
-      : (val: any) => updateTableCell(tableId!, row.id, col.id, val);
+      ? (val: unknown) => updateOutputCell(row.id, col.id, val)
+      : (val: unknown) => updateTableCell(tableId!, row.id, col.id, val);
     
     switch(col.type) {
       case 'text':
@@ -696,10 +697,10 @@ function transformData({ inputTables, params }) {
 
     try {
       // Prepare test data
-      const inputData: Record<string, any[]> = {};
+      const inputData: Record<string, Record<string, unknown>[]> = {};
       inputTables.forEach(table => {
         const tableData = table.rows.map(row => {
-          const obj: Record<string, any> = {};
+          const obj: Record<string, unknown> = {};
           table.columns.forEach(col => {
             let value = row[col.id];
             // Convert to appropriate type
@@ -715,9 +716,9 @@ function transformData({ inputTables, params }) {
         inputData[table.name] = tableData;
       });
 
-      const params: Record<string, any> = {};
+      const params: Record<string, unknown> = {};
       inputParams.forEach(param => {
-        let value: any = param.value;
+        let value: unknown = param.value;
         if (param.type === 'number') {
           value = value === '' ? 0 : parseFloat(value);
         } else if (param.type === 'boolean') {
@@ -738,7 +739,7 @@ function transformData({ inputTables, params }) {
 
         // Compare with expected output
         const expectedOutput = outputTable.rows.map(row => {
-          const obj: Record<string, any> = {};
+          const obj: Record<string, unknown> = {};
           outputTable.columns.forEach(col => {
             let value = row[col.id];
             if (col.type === 'number') {
@@ -769,7 +770,7 @@ function transformData({ inputTables, params }) {
           error: execError instanceof Error ? execError.message : String(execError),
           message: 'Error executing generated code: ' + (execError instanceof Error ? execError.message : String(execError)),
           expected: outputTable.rows.map(row => {
-            const obj: Record<string, any> = {};
+            const obj: Record<string, unknown> = {};
             outputTable.columns.forEach(col => {
               let value = row[col.id];
               if (col.type === 'number') {
@@ -1328,7 +1329,7 @@ function transformData({ inputTables, params }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {testResults.expected?.map((row: any, idx: number) => (
+                      {testResults.expected?.map((row: Record<string, unknown>, idx: number) => (
                         <tr key={idx} className="hover:bg-gray-50">
                           <td className="px-3 py-2 border-b border-r border-gray-300 text-gray-500">{idx + 1}</td>
                           {outputTable.columns.map(col => (
@@ -1363,7 +1364,7 @@ function transformData({ inputTables, params }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {testResults.actual.map((row: any, idx: number) => (
+                        {testResults.actual.map((row: Record<string, unknown>, idx: number) => (
                           <tr key={idx} className="hover:bg-gray-50">
                             <td className="px-3 py-2 border-b border-r border-gray-300 text-gray-500">{idx + 1}</td>
                             {Object.keys(row).map(key => (

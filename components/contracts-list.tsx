@@ -23,7 +23,7 @@ export function ContractsList() {
       const spreadsheetsResponse = await fetch('/api/spreadsheets');
       if (spreadsheetsResponse.ok) {
         const spreadsheets = await spreadsheetsResponse.json();
-        const contractsSpreadsheet = spreadsheets.find((s: any) => 
+        const contractsSpreadsheet = spreadsheets.find((s: { id: string; name: string }) => 
           s.name.toLowerCase().includes('contract')
         );
         
@@ -35,11 +35,11 @@ export function ContractsList() {
             setContractsSpreadsheet(spreadsheetData);
             
             // Convert rows to contracts
-            const contractsData = spreadsheetData.rows.map((row: any) => ({
+            const contractsData = spreadsheetData.rows.map((row: { id: string; cells: Array<{ column_id: string; value?: string }> }) => ({
               id: row.id,
               rowId: row.id,
-              data: row.cells.reduce((acc: Record<string, string>, cell: any) => {
-                const column = spreadsheetData.columns.find((col: any) => col.id === cell.column_id);
+              data: row.cells.reduce((acc: Record<string, string>, cell: { column_id: string; value?: string }) => {
+                const column = spreadsheetData.columns.find((col: { id: string; name: string }) => col.id === cell.column_id);
                 if (column) {
                   acc[column.name] = cell.value || '';
                 }
@@ -130,7 +130,7 @@ export function ContractsList() {
         <div className="text-gray-500 mb-4">
           <FileText size={48} className="mx-auto mb-2 opacity-50" />
           <p>No Contracts spreadsheet found</p>
-          <p className="text-sm">Create a spreadsheet named "Contracts" to view contracts here</p>
+          <p className="text-sm">Create a spreadsheet named &quot;Contracts&quot; to view contracts here</p>
         </div>
         <Button onClick={() => window.location.href = '/spreadsheets'}>
           Go to Spreadsheets
@@ -209,7 +209,7 @@ export function ContractsList() {
       </div>
       
       <div className="text-center text-sm text-gray-500">
-        Showing {contracts.length} contract{contracts.length !== 1 ? 's' : ''} from "{contractsSpreadsheet.name}" spreadsheet
+        Showing {contracts.length} contract{contracts.length !== 1 ? 's' : ''} from &quot;{contractsSpreadsheet.name}&quot; spreadsheet
       </div>
     </div>
   );

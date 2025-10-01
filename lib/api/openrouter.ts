@@ -166,7 +166,7 @@ export class OpenRouterClient {
     }
   }
 
-  async getAvailableModels(): Promise<any[]> {
+  async getAvailableModels(): Promise<Record<string, unknown>[]> {
     try {
       const response = await fetch(`${this.baseUrl}/models`, {
         headers: {

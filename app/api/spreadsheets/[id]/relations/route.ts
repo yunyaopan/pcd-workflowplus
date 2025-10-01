@@ -6,7 +6,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    await params; // Acknowledge the id parameter even if not used
     const body = await request.json();
     const { rowId, columnId, relatedRowIds } = body;
     
@@ -26,7 +26,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    await params; // Acknowledge the id parameter even if not used
     const { searchParams } = new URL(request.url);
     const rowId = searchParams.get('rowId');
     const columnId = searchParams.get('columnId');

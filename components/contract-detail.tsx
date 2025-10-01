@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, FileText, Calendar, User, Building, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import type { SpreadsheetWithData } from '@/lib/database/types';
 
 interface ContractData {
   id: string;
@@ -29,7 +28,7 @@ export function ContractDetail({ contractId }: ContractDetailProps) {
       const spreadsheetsResponse = await fetch('/api/spreadsheets');
       if (spreadsheetsResponse.ok) {
         const spreadsheets = await spreadsheetsResponse.json();
-        const contractsSpreadsheet = spreadsheets.find((s: any) => 
+        const contractsSpreadsheet = spreadsheets.find((s: { id: string; name: string }) => 
           s.name.toLowerCase().includes('contract')
         );
         
@@ -40,11 +39,11 @@ export function ContractDetail({ contractId }: ContractDetailProps) {
             const spreadsheetData = await dataResponse.json();
             
             // Find the specific contract row
-            const contractRow = spreadsheetData.rows.find((row: any) => row.id === contractId);
+            const contractRow = spreadsheetData.rows.find((row: { id: string }) => row.id === contractId);
             
             if (contractRow) {
-              const contractData = contractRow.cells.reduce((acc: Record<string, string>, cell: any) => {
-                const column = spreadsheetData.columns.find((col: any) => col.id === cell.column_id);
+              const contractData = contractRow.cells.reduce((acc: Record<string, string>, cell: { column_id: string; value?: string }) => {
+                const column = spreadsheetData.columns.find((col: { id: string; name: string }) => col.id === cell.column_id);
                 if (column) {
                   acc[column.name] = cell.value || '';
                 }
@@ -56,7 +55,7 @@ export function ContractDetail({ contractId }: ContractDetailProps) {
                 rowId: contractRow.id,
                 spreadsheetId: contractsSpreadsheet.id,
                 data: contractData,
-                columns: spreadsheetData.columns.map((col: any) => ({
+                columns: spreadsheetData.columns.map((col: { id: string; name: string; data_type: string }) => ({
                   id: col.id,
                   name: col.name,
                   data_type: col.data_type

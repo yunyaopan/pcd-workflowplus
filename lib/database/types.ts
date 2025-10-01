@@ -120,7 +120,7 @@ export interface InputTable {
   id: number;
   name: string;
   columns: Column[];
-  rows: Record<string, any>[];
+  rows: Record<string, unknown>[];
 }
 
 export interface InputParam {
@@ -135,7 +135,7 @@ export interface OutputTable {
   name: string;
   baseLogic: string;
   columns: Column[];
-  rows: Record<string, any>[];
+  rows: Record<string, unknown>[];
 }
 
 export interface Column {

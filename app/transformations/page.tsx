@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Calendar, User, Database, Settings, FolderOpen } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Database, Settings, FolderOpen } from 'lucide-react';
 import { transformationsAPI } from '@/lib/api/transformations';
 import { Transformation } from '@/lib/database/types';
 import Link from 'next/link';
