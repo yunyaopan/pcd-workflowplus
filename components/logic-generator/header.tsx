@@ -27,7 +27,6 @@ export function Header({
   isLoading,
   saveError,
   loadError,
-  currentTransformationId,
   transformationName,
   setTransformationName,
   isEditingName,
@@ -140,7 +139,7 @@ export function Header({
             <li>Add your input data tables/ parameters</li>
             <li>Define your output table structure, column types and describe your transformation logic in plain English</li>
             <li>Add example data to your input data tables and output table</li>
-            <li>Click "Generate Code" to create the code</li>
+            <li>Click &quot;Generate Code&quot; to create the code</li>
             <li>Test and validate if the output of the code match with the example data you provided</li>
           </ol>
         </div>
