@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, Trash2, Code, Download, Copy, Check, Play, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, Code, Download, Copy, Check, Play, AlertCircle, Save, FolderOpen } from 'lucide-react';
 import { openRouterClient } from '@/lib/api/openrouter';
+import { transformationsAPI } from '@/lib/api/transformations';
+import { Transformation } from '@/lib/database/types';
+import { useSearchParams } from 'next/navigation';
 
 const DATA_TYPES = ['text', 'number', 'boolean', 'date', 'select'];
 
@@ -45,6 +48,7 @@ interface TestResults {
 }
 
 export default function LogicGenerator() {
+  const searchParams = useSearchParams();
   const [inputTables, setInputTables] = useState<InputTable[]>([]);
   const [inputParams, setInputParams] = useState<InputParam[]>([]);
   const [outputTable, setOutputTable] = useState<OutputTable>({ name: '', baseLogic: '', columns: [], rows: [] });
@@ -62,6 +66,15 @@ export default function LogicGenerator() {
   const [newColumnOptions, setNewColumnOptions] = useState('');
   const [newColumnLogic, setNewColumnLogic] = useState('');
   const [columnMenuPosition, setColumnMenuPosition] = useState({ x: 0, y: 0 });
+  
+  // Save/Load state
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const [saveDescription, setSaveDescription] = useState('');
 
   // Check API key status on component mount
   React.useEffect(() => {
@@ -71,6 +84,14 @@ export default function LogicGenerator() {
     };
     checkApiKey();
   }, []);
+
+  // Load transformation from URL parameter
+  useEffect(() => {
+    const loadId = searchParams.get('load');
+    if (loadId) {
+      loadTransformation(loadId);
+    }
+  }, [searchParams]);
 
   // Test OpenRouter Connection
   const testOpenRouterConnection = async () => {
@@ -98,6 +119,61 @@ export default function LogicGenerator() {
     }
   };
 
+  // Save transformation
+  const saveTransformation = async () => {
+    if (!saveName.trim()) {
+      setSaveError('Please enter a name for the transformation');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      await transformationsAPI.createTransformation({
+        name: saveName.trim(),
+        description: saveDescription.trim() || undefined,
+        input_tables: inputTables,
+        input_params: inputParams,
+        output_table: outputTable,
+      });
+
+      setShowSaveModal(false);
+      setSaveName('');
+      setSaveDescription('');
+      
+      // Show success message (you could add a toast notification here)
+      alert('Transformation saved successfully!');
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Failed to save transformation');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Load transformation
+  const loadTransformation = async (id: string) => {
+    setIsLoading(true);
+    setLoadError(null);
+
+    try {
+      const response = await transformationsAPI.getTransformation(id);
+      const transformation = response.transformation;
+
+      setInputTables(transformation.input_tables);
+      setInputParams(transformation.input_params);
+      setOutputTable(transformation.output_table);
+      setGeneratedCode(''); // Clear any generated code
+      setTestResults(null); // Clear test results
+
+      // Transformation loaded successfully (popup removed)
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Failed to load transformation');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Column Type Selector Component - Positioned below button
   const ColumnTypeSelector = ({ isOutput, onAdd, onClose, position }: {
     isOutput: boolean;
@@ -107,11 +183,21 @@ export default function LogicGenerator() {
   }) => {
     // Calculate if menu would go off-screen and adjust
     const menuWidth = 320;
+    const menuHeight = 280; // Approximate height of the menu
     const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
     let adjustedX = position.x;
+    let adjustedY = position.y;
     
+    // Adjust horizontal position if menu would go off-screen
     if (adjustedX + menuWidth > viewportWidth - 20) {
       adjustedX = viewportWidth - menuWidth - 20;
+    }
+    
+    // Adjust vertical position if menu would go off-screen
+    if (adjustedY + menuHeight > viewportHeight - 20) {
+      // Position above the button instead of below
+      adjustedY = position.y - menuHeight - 8;
     }
     
     return (
@@ -127,7 +213,7 @@ export default function LogicGenerator() {
           className="fixed bg-white border border-gray-300 rounded-lg shadow-xl z-50 p-4"
           style={{
             left: `${adjustedX}px`,
-            top: `${position.y}px`,
+            top: `${adjustedY}px`,
             width: '320px'
           }}
           onClick={(e) => e.stopPropagation()}
@@ -773,6 +859,56 @@ function transformData({ inputTables, params }) {
               </p>
             </div>
           )}
+
+          {/* Save/Load Actions */}
+          <div className="mt-6 flex justify-center gap-4">
+            <button
+              onClick={() => setShowSaveModal(true)}
+              disabled={isSaving || isLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save size={16} />
+              {isSaving ? 'Saving...' : 'Save Transformation'}
+            </button>
+            <a
+              href="/transformations"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+            >
+              <FolderOpen size={16} />
+              View Saved
+            </a>
+          </div>
+
+          {/* Error Messages */}
+          {saveError && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2 text-red-800">
+                <AlertCircle size={20} />
+                <span className="font-semibold">Save Error</span>
+              </div>
+              <p className="text-red-700 text-sm mt-2">{saveError}</p>
+            </div>
+          )}
+
+          {loadError && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2 text-red-800">
+                <AlertCircle size={20} />
+                <span className="font-semibold">Load Error</span>
+              </div>
+              <p className="text-red-700 text-sm mt-2">{loadError}</p>
+            </div>
+          )}
+
+          {isLoading && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 text-blue-800">
+                <AlertCircle size={20} />
+                <span className="font-semibold">Loading Transformation...</span>
+              </div>
+              <p className="text-blue-700 text-sm mt-2">Please wait while we load your saved transformation.</p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -1275,6 +1411,72 @@ function transformData({ inputTables, params }) {
             setNewColumnLogic('');
           }}
         />
+      )}
+
+      {/* Save Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Save Transformation</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  value={saveName}
+                  onChange={(e) => setSaveName(e.target.value)}
+                  placeholder="Enter transformation name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  autoFocus
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={saveDescription}
+                  onChange={(e) => setSaveDescription(e.target.value)}
+                  placeholder="Enter description (optional)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {saveError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm">{saveError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowSaveModal(false);
+                  setSaveName('');
+                  setSaveDescription('');
+                  setSaveError(null);
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition"
+                disabled={isSaving}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveTransformation}
+                disabled={isSaving || !saveName.trim()}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -102,3 +102,62 @@ export interface UpdateCellRequest {
 export interface UpdateRelationRequest {
   relatedRowIds: string[];
 }
+
+// Transformation types
+export interface Transformation {
+  id: string;
+  name: string;
+  description?: string;
+  user_id: string;
+  input_tables: InputTable[];
+  input_params: InputParam[];
+  output_table: OutputTable;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InputTable {
+  id: number;
+  name: string;
+  columns: Column[];
+  rows: Record<string, any>[];
+}
+
+export interface InputParam {
+  id: number;
+  name: string;
+  type: string;
+  value: string;
+  description: string;
+}
+
+export interface OutputTable {
+  name: string;
+  baseLogic: string;
+  columns: Column[];
+  rows: Record<string, any>[];
+}
+
+export interface Column {
+  id: number;
+  name: string;
+  type: string;
+  logic?: string;
+  options?: string[];
+}
+
+export interface CreateTransformationRequest {
+  name: string;
+  description?: string;
+  input_tables: InputTable[];
+  input_params: InputParam[];
+  output_table: OutputTable;
+}
+
+export interface UpdateTransformationRequest {
+  name?: string;
+  description?: string;
+  input_tables?: InputTable[];
+  input_params?: InputParam[];
+  output_table?: OutputTable;
+}
